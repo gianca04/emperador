@@ -27,15 +27,15 @@ use Filament\Forms\Get;
 use Illuminate\Database\Eloquent\Model;
 
 
-
-
-
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
     protected static ?string $navigationLabel = 'Empleados';
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Administrar Sistema';
+
+    protected static ?int $navigationSort = 2;
+    protected static ?string $navigationIcon = 'heroicon-o-users';
 
     public static function form(Form $form): Form
     {
@@ -117,58 +117,40 @@ class UserResource extends Resource
                         Select::make('departamento_id')
                             ->label('Departamento')
                             ->options(Departamento::all()->pluck('name', 'id'))
-                            ->reactive()
-                            ->afterStateUpdated(fn(callable $set) => $set('provincia_id', null))
-                            ->afterStateUpdated(fn(callable $set) => $set('distrito_id', null))
-                            ->afterStateHydrated(function (callable $set, $state) {
-                                if ($state) {
-                                    $provincia = Provincia::where('departamento_id', $state)->first();
-                                    if ($provincia) {
-                                        $set('provincia_id', $provincia->id);
-                                    }
-                                }
-                            })
-                            ->required(),
+                            ->reactive() // Activa la reactividad para actualizar los siguientes campos
+                            ->afterStateUpdated(function (callable $set) {
+                                // Al cambiar el departamento, limpia los campos dependientes
+                                $set('provincia_id', null);
+                                $set('distrito_id', null);
+                            }),
 
                         Select::make('provincia_id')
                             ->label('Provincia')
                             ->options(function (callable $get) {
-                                $departamentoId = $get('departamento_id');
-                                if ($departamentoId) {
-                                    return Provincia::where('departamento_id', $departamentoId)->pluck('name', 'id');
-                                }
-                                return [];
+                                $departamentoId = $get('departamento_id'); // Obtén el departamento seleccionado
+                                return $departamentoId
+                                    ? Provincia::where('departamento_id', $departamentoId)->pluck('name', 'id')
+                                    : [];
                             })
-                            ->reactive()
-                            ->afterStateUpdated(fn(callable $set) => $set('distrito_id', null))
-                            ->afterStateHydrated(function (callable $set, $state) {
-                                if ($state) {
-                                    $distrito = Distrito::where('provincia_id', $state)->first();
-                                    if ($distrito) {
-                                        $set('distrito_id', $distrito->id);
-                                    }
-                                }
+                            ->reactive() // Activa la reactividad para actualizar distritos
+                            ->afterStateUpdated(function (callable $set) {
+                                // Al cambiar la provincia, limpia el distrito
+                                $set('distrito_id', null);
                             })
-                            ->required(),
+                            ->disabled(fn(callable $get) => !$get('departamento_id')), // Desactiva si no hay departamento seleccionado
 
                         Select::make('distrito_id')
                             ->label('Distrito')
-                            ->relationship('distrito', 'name') // Usa la relación para obtener automáticamente los nombres
                             ->options(function (callable $get) {
-                                $provinciaId = $get('provincia_id');
-                                if ($provinciaId) {
-                                    // Retorna los distritos filtrados por provincia
-                                    return Distrito::where('provincia_id', $provinciaId)->pluck('name', 'id');
-                                }
-                                return [];
+                                $provinciaId = $get('provincia_id'); // Obtén la provincia seleccionada
+                                return $provinciaId
+                                    ? Distrito::where('provincia_id', $provinciaId)->pluck('name', 'id')
+                                    : [];
                             })
-                            ->searchable() // Permite buscar en las opciones
-                            ->preload()    // Carga las opciones al inicio
-                            ->required(),  // Campo obligatorio
+                            ->disabled(fn(callable $get) => !$get('provincia_id')), // Desactiva si no hay provincia seleccionada
                     ])
             ]);
     }
-
 
     public static function table(Table $table): Table
     {
@@ -176,12 +158,48 @@ class UserResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
+
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('email_verified_at')
-                    ->dateTime()
+                Tables\Columns\TextColumn::make('dni')
+                    ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('nombre')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('apellido')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('telefono')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('direccion')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('distrito.name')
+                    ->label('Distrito') // Cambia el label a tu gusto
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('provincia.name')
+                    ->label('Provincia') // Cambia el label a tu gusto
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('departamento.name')
+                    ->label('Departamento') // Cambia el label a tu gusto
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+
                 Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
