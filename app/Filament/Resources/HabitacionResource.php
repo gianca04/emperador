@@ -46,15 +46,15 @@ class HabitacionResource extends Resource
                         }
                     }),
 
-                    Forms\Components\TextInput::make('numero')
+                Forms\Components\TextInput::make('numero')
                     ->required()
                     ->numeric()
                     ->label('Número de Habitación')
-                    ->rules(fn ($record) => [
+                    ->rules(fn($record) => [
                         Rule::unique('habitaciones', 'numero')->ignore($record?->id),
                     ])
                     ->reactive(),
-                
+
 
                 Forms\Components\Select::make('estado')
                     ->label('Estado Actual de habitación')
@@ -141,9 +141,7 @@ class HabitacionResource extends Resource
                         $set('precio_final', (float) $get('precio_base') + (float) $get('precio_caracteristicas'));
                     }),
 
-
                 Forms\Components\TextInput::make('precio_caracteristicas')
-                    ->required()
                     ->numeric()
                     ->default(0.00)
                     ->disabled(),
@@ -162,22 +160,31 @@ class HabitacionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->searchable(),
+
                 Tables\Columns\TextColumn::make('estado'),
-                Tables\Columns\TextColumn::make('habitacion_tipo_id')
-                    ->numeric()
+
+                Tables\Columns\TextColumn::make('tipo.name')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('capacidad')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('ubicacion'),
+
+                Tables\Columns\TextColumn::make('tipo.capacidad')
+                ->label('Capacidad')
+                    ->sortable()
+                    ->icon('heroicon-s-user-group'),
+
+                Tables\Columns\TextColumn::make('ubicacion')
+                    ->icon('heroicon-s-building-office'),
+
                 Tables\Columns\TextColumn::make('precio_base')
                     ->numeric()
+                    ->prefix('S/ ')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('precio_final')
                     ->numeric()
+                    ->prefix('S/ ')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('ultima_limpieza')
                     ->dateTime()
@@ -201,6 +208,7 @@ class HabitacionResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
+
             ]);
     }
 
