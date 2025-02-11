@@ -23,13 +23,11 @@ class HabitacionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-
-
-
                 Forms\Components\Select::make('ubicacion')
                     ->label('Ubicación')
                     ->options([
@@ -41,22 +39,18 @@ class HabitacionResource extends Resource
                     ->searchable()
                     ->required()
                     ->reactive()
-                    ->afterStateUpdated(
-                        function ($state, callable $set) {
-                            if ($state) {
-                                // Establecer el número de habitación basado en el piso seleccionado
-                                $set('numero', $state . '00');
-                            }
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $set('numero', $state . '00');
                         }
-                    ),
+                    }),
 
                 Forms\Components\TextInput::make('numero')
                     ->required()
                     ->numeric()
                     ->label('Número de Habitación')
-                    ->unique('habitaciones', 'numero') // Asegurar unicidad en la tabla "habitaciones"
+                    ->unique('habitaciones', 'numero')
                     ->reactive(),
-
 
                 Forms\Components\Select::make('estado')
                     ->label('Estado Actual de habitación')
@@ -70,9 +64,9 @@ class HabitacionResource extends Resource
                     ->preload()
                     ->required()
                     ->default('Disponible'),
+
                 Forms\Components\Textarea::make('descripcion')
                     ->columnSpanFull(),
-
 
                 Forms\Components\Select::make('habitacion_tipo_id')
                     ->label('Tipo de Habitación')
@@ -80,27 +74,31 @@ class HabitacionResource extends Resource
                     ->preload()
                     ->searchable()
                     ->required()
-                    ->reactive() // Hace que el campo se actualice dinámicamente
-                    ->afterStateUpdated(function ($state, callable $set) {
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
                         if (!$state) {
-                            // Si el tipo de habitación se borra, limpiar características
                             $set('caracteristicas', []);
+                            $set('precio_caracteristicas', 0);
+                            $set('precio_final', $get('precio_base'));
                             return;
                         }
 
-                        // Buscar el tipo de habitación seleccionado
+                        // Obtener características del tipo de habitación
                         $tipoHabitacion = HabitacionTipo::find($state);
-
                         if ($tipoHabitacion) {
-                            // Obtener las características asociadas al tipo de habitación evitando ambigüedad
-                            $caracteristicas = $tipoHabitacion->caracteristicas()->orderBy('name')->pluck('caracteristicas.id')->toArray();
-
-                            // Actualizar dinámicamente el campo de características
+                            $caracteristicas = $tipoHabitacion->caracteristicas()->pluck('caracteristicas.id')->toArray();
                             $set('caracteristicas', $caracteristicas);
+
+                            // Sumar los precios de las características
+                            $total = Caracteristica::whereIn('id', $caracteristicas)->sum('precio');
+                            $set('precio_caracteristicas', $total);
                         } else {
-                            // Si no hay tipo de habitación, limpiar las características
                             $set('caracteristicas', []);
+                            $set('precio_caracteristicas', 0);
                         }
+
+                        // Actualizar el precio final
+                        $set('precio_final', $get('precio_base') + $get('precio_caracteristicas'));
                     }),
 
                 Forms\Components\Section::make('Características de habitación')
@@ -112,7 +110,7 @@ class HabitacionResource extends Resource
                             ->multiple()
                             ->preload()
                             ->searchable()
-                            ->reactive() // Hace que el campo se actualice dinámicamente
+                            ->reactive()
                             ->options(
                                 fn(callable $get) =>
                                 Caracteristica::query()
@@ -127,31 +125,49 @@ class HabitacionResource extends Resource
                             ->helperText('Seleccione una o más características disponibles para esta habitación.')
                             ->validationMessages([
                                 'exists' => 'Alguna de las características seleccionadas no es válida.',
-                            ]),
+                            ])
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if (!$state) {
+                                    $set('precio_caracteristicas', 0);
+                                } else {
+                                    $total = Caracteristica::whereIn('id', $state)->sum('precio');
+                                    $set('precio_caracteristicas', $total);
+                                }
+                            }),
                     ]),
 
                 Forms\Components\Textarea::make('notas')
                     ->columnSpanFull(),
 
-
                 Forms\Components\TextInput::make('precio_base')
                     ->required()
                     ->numeric()
-                    ->default(0.00),
+                    ->default(0.00)
+                    ->reactive()
+                    ->afterStateUpdated(function (callable $get, callable $set) {
+                        $set('precio_final', $get('precio_base') + $get('precio_caracteristicas'));
+                    }),
 
                 Forms\Components\TextInput::make('precio_caracteristicas')
                     ->required()
                     ->numeric()
-                    ->default(0.00),
-
+                    ->default(0.00)
+                    ->disabled(), // Evita que el usuario lo edite manualmente
 
                 Forms\Components\TextInput::make('precio_final')
                     ->required()
                     ->numeric()
-                    ->default(0.00),
+                    ->default(0.00)
+                    ->disabled() // Evita edición manual
+                    ->reactive()
+                    ->afterStateUpdated(function (callable $get, callable $set) {
+                        $set('precio_final', $get('precio_base') + $get('precio_caracteristicas'));
+                    }),
+
                 Forms\Components\DateTimePicker::make('ultima_limpieza'),
             ]);
     }
+
 
     public static function table(Table $table): Table
     {
