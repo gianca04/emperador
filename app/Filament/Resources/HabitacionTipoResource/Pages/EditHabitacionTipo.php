@@ -10,6 +10,8 @@ class EditHabitacionTipo extends EditRecord
 {
     protected static string $resource = HabitacionTipoResource::class;
 
+    
+
     protected function getHeaderActions(): array
     {
         return [

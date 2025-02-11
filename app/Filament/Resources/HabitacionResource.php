@@ -10,6 +10,7 @@ use App\Models\Caracteristica;
 use App\Models\HabitacionTipo;
 
 use Filament\Forms;
+use Illuminate\Validation\Rule;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -45,12 +46,15 @@ class HabitacionResource extends Resource
                         }
                     }),
 
-                Forms\Components\TextInput::make('numero')
+                    Forms\Components\TextInput::make('numero')
                     ->required()
                     ->numeric()
                     ->label('Número de Habitación')
-                    ->unique('habitaciones', 'numero')
+                    ->rules(fn ($record) => [
+                        Rule::unique('habitaciones', 'numero')->ignore($record?->id),
+                    ])
                     ->reactive(),
+                
 
                 Forms\Components\Select::make('estado')
                     ->label('Estado Actual de habitación')
@@ -79,7 +83,7 @@ class HabitacionResource extends Resource
                         if (!$state) {
                             $set('caracteristicas', []);
                             $set('precio_caracteristicas', 0);
-                            $set('precio_final', $get('precio_base'));
+                            $set('precio_final', (float) $get('precio_base'));
                             return;
                         }
 
@@ -90,51 +94,40 @@ class HabitacionResource extends Resource
                             $set('caracteristicas', $caracteristicas);
 
                             // Sumar los precios de las características
-                            $total = Caracteristica::whereIn('id', $caracteristicas)->sum('precio');
+                            $total = (float) Caracteristica::whereIn('id', $caracteristicas)->sum('precio');
                             $set('precio_caracteristicas', $total);
                         } else {
                             $set('caracteristicas', []);
                             $set('precio_caracteristicas', 0);
                         }
 
-                        // Actualizar el precio final
-                        $set('precio_final', $get('precio_base') + $get('precio_caracteristicas'));
+                        // Asegurar que los valores sean numéricos antes de sumarlos
+                        $set('precio_final', (float) $get('precio_base') + (float) $get('precio_caracteristicas'));
                     }),
 
-                Forms\Components\Section::make('Características de habitación')
-                    ->description('Seleccione las características adicionales para esta habitación.')
-                    ->schema([
-                        Forms\Components\Select::make('caracteristicas')
-                            ->label('Características')
-                            ->relationship('caracteristicas', 'name')
-                            ->multiple()
-                            ->preload()
-                            ->searchable()
-                            ->reactive()
-                            ->options(
-                                fn(callable $get) =>
-                                Caracteristica::query()
-                                    ->select('caracteristicas.id', 'caracteristicas.name', 'caracteristicas.precio')
-                                    ->orderBy('caracteristicas.name')
-                                    ->get()
-                                    ->mapWithKeys(fn($caracteristica) => [
-                                        $caracteristica->id => "{$caracteristica->name} - " .
-                                            ($caracteristica->precio == 0.00 ? "Incluida" : "S/ {$caracteristica->precio}"),
-                                    ])
-                            )
-                            ->helperText('Seleccione una o más características disponibles para esta habitación.')
-                            ->validationMessages([
-                                'exists' => 'Alguna de las características seleccionadas no es válida.',
+                Forms\Components\Select::make('caracteristicas')
+                    ->label('Características')
+                    ->relationship('caracteristicas', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->reactive()
+                    ->options(
+                        fn() =>
+                        Caracteristica::query()
+                            ->select('caracteristicas.id', 'caracteristicas.name', 'caracteristicas.precio')
+                            ->orderBy('caracteristicas.name')
+                            ->get()
+                            ->mapWithKeys(fn($caracteristica) => [
+                                $caracteristica->id => "{$caracteristica->name} - " .
+                                    ($caracteristica->precio == 0.00 ? "Incluida" : "S/ {$caracteristica->precio}"),
                             ])
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                if (!$state) {
-                                    $set('precio_caracteristicas', 0);
-                                } else {
-                                    $total = Caracteristica::whereIn('id', $state)->sum('precio');
-                                    $set('precio_caracteristicas', $total);
-                                }
-                            }),
-                    ]),
+                    )
+                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        $total = (float) Caracteristica::whereIn('id', $state)->sum('precio');
+                        $set('precio_caracteristicas', $total);
+                        $set('precio_final', (float) $get('precio_base') + $total);
+                    }),
 
                 Forms\Components\Textarea::make('notas')
                     ->columnSpanFull(),
@@ -145,24 +138,21 @@ class HabitacionResource extends Resource
                     ->default(0.00)
                     ->reactive()
                     ->afterStateUpdated(function (callable $get, callable $set) {
-                        $set('precio_final', $get('precio_base') + $get('precio_caracteristicas'));
+                        $set('precio_final', (float) $get('precio_base') + (float) $get('precio_caracteristicas'));
                     }),
+
 
                 Forms\Components\TextInput::make('precio_caracteristicas')
                     ->required()
                     ->numeric()
                     ->default(0.00)
-                    ->disabled(), // Evita que el usuario lo edite manualmente
+                    ->disabled(),
 
                 Forms\Components\TextInput::make('precio_final')
                     ->required()
                     ->numeric()
                     ->default(0.00)
-                    ->disabled() // Evita edición manual
-                    ->reactive()
-                    ->afterStateUpdated(function (callable $get, callable $set) {
-                        $set('precio_final', $get('precio_base') + $get('precio_caracteristicas'));
-                    }),
+                    ->disabled(),
 
                 Forms\Components\DateTimePicker::make('ultima_limpieza'),
             ]);
