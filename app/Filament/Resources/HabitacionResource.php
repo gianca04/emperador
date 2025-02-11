@@ -27,11 +27,36 @@ class HabitacionResource extends Resource
     {
         return $form
             ->schema([
+
+
+
+                Forms\Components\Select::make('ubicacion')
+                    ->label('Ubicación')
+                    ->options([
+                        '1' => 'Primer Piso',
+                        '2' => 'Segundo Piso',
+                        '3' => 'Tercer Piso',
+                        '4' => 'Cuarto Piso',
+                    ])
+                    ->searchable()
+                    ->required()
+                    ->reactive()
+                    ->afterStateUpdated(
+                        function ($state, callable $set) {
+                            if ($state) {
+                                // Establecer el número de habitación basado en el piso seleccionado
+                                $set('numero', $state . '00');
+                            }
+                        }
+                    ),
+
                 Forms\Components\TextInput::make('numero')
                     ->required()
                     ->numeric()
                     ->label('Número de Habitación')
-                    ->unique(true),
+                    ->unique('habitaciones', 'numero') // Asegurar unicidad en la tabla "habitaciones"
+                    ->reactive(),
+
 
                 Forms\Components\Select::make('estado')
                     ->label('Estado Actual de habitación')
@@ -46,7 +71,6 @@ class HabitacionResource extends Resource
                     ->required()
                     ->default('Disponible'),
                 Forms\Components\Textarea::make('descripcion')
-                    ->required()
                     ->columnSpanFull(),
 
 
@@ -79,7 +103,7 @@ class HabitacionResource extends Resource
                         }
                     }),
 
-                    Forms\Components\Section::make('Características de habitación')
+                Forms\Components\Section::make('Características de habitación')
                     ->description('Seleccione las características adicionales para esta habitación.')
                     ->schema([
                         Forms\Components\Select::make('caracteristicas')
@@ -109,21 +133,17 @@ class HabitacionResource extends Resource
                 Forms\Components\Textarea::make('notas')
                     ->columnSpanFull(),
 
-                Forms\Components\Select::make('ubicacion')
-                    ->label('Ubicación')
-                    ->options([
-                        'Segundo Piso' => 'Segundo Piso',
-                        'Tercer Piso' => 'Tercer Piso',
-                        'Cuarto Piso' => 'Cuarto Piso',
-                        'Quinto Piso' => 'Quinto Piso',
-                    ])
-                    ->searchable()
-                    ->required(),
 
                 Forms\Components\TextInput::make('precio_base')
                     ->required()
                     ->numeric()
                     ->default(0.00),
+
+                Forms\Components\TextInput::make('precio_caracteristicas')
+                    ->required()
+                    ->numeric()
+                    ->default(0.00),
+
 
                 Forms\Components\TextInput::make('precio_final')
                     ->required()
