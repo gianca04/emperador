@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Departament;
 
 class User extends Authenticatable
 {
@@ -29,7 +30,10 @@ class User extends Authenticatable
         'distrito_id',
         'provincia_id', // Nuevo campo
         'departamento_id', // Nuevo campo
+        'active',
+        'photo', // Nuevo campO
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -50,6 +54,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'nacimiento' => 'date',
+        'active' => 'boolean',
     ];
 
     /**
@@ -80,5 +85,43 @@ class User extends Authenticatable
     public function departamento()
     {
         return $this->belongsTo(Departamento::class);
+    }
+
+    /**
+     * Scope para obtener usuarios activos.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('active', true);
+    }
+
+    /**
+     * Scope para obtener usuarios inactivos.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeInactive($query)
+    {
+        return $query->where('active', false);
+    }
+
+    public function calendars(){
+        return $this->belongsToMany(Calendar::class);
+    }
+
+    public function departments(){
+        return $this->belongsToMany(Departament::class);
+    }
+
+    public function holidays(){
+        return $this->hasMany(Holiday::class);
+    }
+
+    public function timesheets(){
+        return $this->hasMany(Timesheet::class);
     }
 }

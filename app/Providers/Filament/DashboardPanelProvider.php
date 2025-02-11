@@ -28,7 +28,26 @@ class DashboardPanelProvider extends PanelProvider
             ->path('dashboard')
             ->login()
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => '#2563eb', // Azul vibrante para llamadas a la acción
+                'secondary' => '#6b7280', // Gris medio para elementos secundarios y textos
+                'accent' => '#d946ef', // Fucsia para detalles destacados
+                'success' => '#16a34a', // Verde para notificaciones o estados positivos
+                'danger' => '#dc2626', // Rojo para alertas o errores
+                'warning' => '#f59e0b', // Amarillo/naranja para advertencias
+                'info' => '#0ea5e9', // Azul claro para información general
+                'gray' => [
+                    50 => '#f9fafb',
+                    100 => '#f3f4f6',
+                    200 => '#e5e7eb',
+                    300 => '#d1d5db',
+                    400 => '#9ca3af',
+                    500 => '#6b7280',
+                    600 => '#4b5563',
+                    700 => '#374151',
+                    800 => '#1f2937',
+                    900 => '#111827',
+                    950 => '#030712',
+                ]
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
