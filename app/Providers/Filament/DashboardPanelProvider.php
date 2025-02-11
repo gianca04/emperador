@@ -20,6 +20,8 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class DashboardPanelProvider extends PanelProvider
 {
+
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -28,8 +30,8 @@ class DashboardPanelProvider extends PanelProvider
             ->path('dashboard')
             ->login()
             ->colors([
-                'primary' => '#2563eb', // Azul vibrante para llamadas a la acción
-                'secondary' => '#6b7280', // Gris medio para elementos secundarios y textos
+                'primary' => '#1E40AF', // Azul vibrante para llamadas a la acción
+                'secondary' => '#4B5563', // Gris medio para elementos secundarios y textos
                 'accent' => '#d946ef', // Fucsia para detalles destacados
                 'success' => '#16a34a', // Verde para notificaciones o estados positivos
                 'danger' => '#dc2626', // Rojo para alertas o errores
