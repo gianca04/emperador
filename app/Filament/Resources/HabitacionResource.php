@@ -212,55 +212,66 @@ class HabitacionResource extends Resource
 
             ->columns([
 
-                Tables\Columns\TextColumn::make('numero')
-                    ->searchable()
-                    ->label('Número')
-                    ->size(TextColumn\TextColumnSize::Large),
-                //->weight(FontWeight::Bold),
+                Tables\Columns\Layout\Grid::make()
+                    ->columns(1)
+                    ->schema([
 
-                Tables\Columns\TextColumn::make('estado')
-                    ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'Disponible' => 'success', // Verde para habitaciones listas
-                        'Por limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
-                        'Deshabilitada' => 'gray', // Gris para habitaciones fuera de servicio
-                        'En Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
-                        default => 'secondary', // Color por defecto si hay valores inesperados
-                    }),
+                        Tables\Columns\TextColumn::make('numero')
+                            ->searchable()
+                            ->label('Número')
+                            ->size(TextColumn\TextColumnSize::Large),
+                        //->weight(FontWeight::Bold),
 
-                Tables\Columns\TextColumn::make('tipo.name')
-                    ->sortable(),
+                        Tables\Columns\TextColumn::make('estado')
+                            ->badge()
+                            ->color(fn(string $state): string => match ($state) {
+                                'Disponible' => 'success', // Verde para habitaciones listas
+                                'Por limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
+                                'Deshabilitada' => 'gray', // Gris para habitaciones fuera de servicio
+                                'En Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
+                                default => 'secondary', // Color por defecto si hay valores inesperados
+                            }),
+
+                        Tables\Columns\TextColumn::make('tipo.name')
+                            ->sortable(),
 
 
-                Tables\Columns\TextColumn::make('tipo.capacidad')
-                    ->label('Capacidad')
-                    ->sortable()
-                    ->icon('heroicon-s-user-group'),
+                        Tables\Columns\TextColumn::make('tipo.capacidad')
+                            ->label('Capacidad')
+                            ->sortable()
+                            ->icon('heroicon-s-user-group'),
 
-                Tables\Columns\TextColumn::make('ubicacion')
-                    ->prefix('Piso: ')
-                    ->icon('heroicon-s-building-office'),
+                        Tables\Columns\TextColumn::make('ubicacion')
+                            ->prefix('Piso: ')
+                            ->icon('heroicon-s-building-office'),
 
-                Tables\Columns\TextColumn::make('precio_base')
-                    ->numeric()
-                    ->prefix('S/ ')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('precio_final')
-                    ->numeric()
-                    ->prefix('S/ ')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('ultima_limpieza')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        Tables\Columns\TextColumn::make('precio_base')
+                            ->numeric()
+                            ->prefix('S/ ')
+                            ->sortable(),
+                        Tables\Columns\TextColumn::make('precio_final')
+                            ->numeric()
+                            ->prefix('S/ ')
+                            ->sortable(),
+                        Tables\Columns\TextColumn::make('ultima_limpieza')
+                            ->dateTime()
+                            ->sortable(),
+                        Tables\Columns\TextColumn::make('created_at')
+                            ->dateTime()
+                            ->sortable()
+                            ->toggleable(isToggledHiddenByDefault: true),
+                        Tables\Columns\TextColumn::make('updated_at')
+                            ->dateTime()
+                            ->sortable()
+                            ->toggleable(isToggledHiddenByDefault: true),
+                    ])
             ])
+            
+            ->contentGrid([
+                'md' => '3',
+                'xl' => 4,
+            ])
+
             ->filters([
                 //
             ])

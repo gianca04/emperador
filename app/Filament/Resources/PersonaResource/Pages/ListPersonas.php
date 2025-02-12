@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\CalendarResource\Pages;
+namespace App\Filament\Resources\PersonaResource\Pages;
 
-use App\Filament\Resources\CalendarResource;
+use App\Filament\Resources\PersonaResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
-class ListCalendars extends ListRecords
+class ListPersonas extends ListRecords
 {
-    protected static string $resource = CalendarResource::class;
+    protected static string $resource = PersonaResource::class;
 
     protected function getHeaderActions(): array
     {

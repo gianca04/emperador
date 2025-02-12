@@ -105,6 +105,9 @@ class HabitacionTipoResource extends Resource
     {
         return $table
             ->columns([
+
+
+
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
 
@@ -150,8 +153,8 @@ class HabitacionTipoResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
             ])
+
             ->filters([
                 //
             ])
