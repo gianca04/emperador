@@ -212,10 +212,6 @@ class HabitacionResource extends Resource
 
             ->columns([
 
-                Tables\Columns\Layout\Grid::make()
-                    ->columns(1)
-                    ->schema([
-
                         Tables\Columns\TextColumn::make('numero')
                             ->searchable()
                             ->label('Número')
@@ -265,12 +261,8 @@ class HabitacionResource extends Resource
                             ->sortable()
                             ->toggleable(isToggledHiddenByDefault: true),
                     ])
-            ])
+
             
-            ->contentGrid([
-                'md' => '3',
-                'xl' => 4,
-            ])
 
             ->filters([
                 //
