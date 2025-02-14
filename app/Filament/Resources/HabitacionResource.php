@@ -71,6 +71,7 @@ class HabitacionResource extends Resource
                             'Por limpiar' => 'Por limpiar',
                             'Deshabilitada' => 'Deshabilitada',
                             'En Mantenimiento' => 'En Mantenimiento',
+                            'Ocupada' => 'Ocupada',
                         ])
                         ->searchable()
                         ->preload()
@@ -225,6 +226,7 @@ class HabitacionResource extends Resource
                                 'Por limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
                                 'Deshabilitada' => 'gray', // Gris para habitaciones fuera de servicio
                                 'En Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
+                                'Ocupada' => 'danger', // Rojo para habitaciones en reparación
                                 default => 'secondary', // Color por defecto si hay valores inesperados
                             }),
 

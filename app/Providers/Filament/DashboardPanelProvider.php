@@ -8,6 +8,7 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
 use Filament\Panel;
+use Filament\Support\Assets\Js;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
@@ -25,7 +26,9 @@ class DashboardPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
-
+            ->assets([
+                Js::make('flowbite', 'https://cdnjs.cloudflare.com/ajax/libs/flowbite/1.6.0/flowbite.min.js'),
+            ])
             ->sidebarCollapsibleOnDesktop()
             ->default()
             ->id('dashboard')
@@ -78,4 +81,5 @@ class DashboardPanelProvider extends PanelProvider
                 Authenticate::class,
             ]);
     }
+
 }

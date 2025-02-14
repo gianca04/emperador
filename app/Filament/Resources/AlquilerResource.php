@@ -5,8 +5,10 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AlquilerResource\Pages;
 use App\Filament\Resources\AlquilerResource\RelationManagers;
 use App\Models\Alquiler;
+use App\Models\Habitacion;
 use Filament\Forms;
 use Filament\Forms\Form;
+
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -24,24 +26,65 @@ class AlquilerResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('habitacion_id')
-                    ->relationship('habitacion', 'id')
+                    ->label('Habitación')
+                    ->options(Habitacion::all()->pluck('numero', 'id')->map(fn($name) => (string) $name)->toArray())
+                    ->searchable()
                     ->required(),
-                Forms\Components\TextInput::make('tipo_alquiler')
+
+                Forms\Components\Select::make('tipo_alquiler')
+                    ->label('Tipo de Alquiler')
+                    ->options([
+                        'HORAS' => 'Por Horas',
+                        'DIAS' => 'Por Días',
+                    ])
+                    ->native()
+                    ->default('HORAS')
                     ->required(),
+
                 Forms\Components\DateTimePicker::make('fecha_inicio')
-                    ->required(),
-                Forms\Components\DateTimePicker::make('fecha_fin'),
-                Forms\Components\TextInput::make('horas')
-                    ->numeric()
-                    ->default(null),
-                Forms\Components\TextInput::make('monto_total')
+                    ->label('Fecha de Inicio')
                     ->required()
+                    ->native(false)
+                    ->default(now()),
+
+                Forms\Components\DateTimePicker::make('fecha_fin')
+                    ->label('Fecha de Fin')
+                    ->nullable()
+                    ->after('fecha_inicio'),
+
+                Forms\Components\TextInput::make('horas')
+                    ->label('Horas')
                     ->numeric()
-                    ->default(0.00),
-                Forms\Components\DateTimePicker::make('checkin_at'),
-                Forms\Components\DateTimePicker::make('checkout_at'),
-                Forms\Components\TextInput::make('estado')
+                    ->minValue(1)
+                    ->nullable()
+                    ->visible(fn($get) => $get('tipo_alquiler') === 'HORAS'),
+
+                Forms\Components\TextInput::make('monto_total')
+                    ->label('Monto Total')
+                    ->numeric()
+                    ->minValue(0)
+                    ->default(0)
                     ->required(),
+
+                Forms\Components\DateTimePicker::make('checkin_at')
+                    ->label('Check-in')
+                    ->nullable(),
+
+                Forms\Components\DateTimePicker::make('checkout_at')
+                    ->label('Check-out')
+                    ->nullable()
+                    ->after('checkin_at'),
+
+                Forms\Components\Select::make('estado')
+                    ->label('Estado')
+                    ->options([
+                        'pendiente' => 'Pendiente',
+                        'en_curso' => 'En Curso',
+                        'finalizado' => 'Finalizado',
+                    ])
+                    ->default('pendiente')
+                    ->required()
+                    ->native(false),
             ]);
     }
 
@@ -49,37 +92,52 @@ class AlquilerResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('habitacion.id')
-                    ->numeric()
+                \Filament\Tables\Columns\TextColumn::make('habitacion.nombre')
+                    ->label('Habitación')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('tipo_alquiler'),
-                Tables\Columns\TextColumn::make('fecha_inicio')
-                    ->dateTime()
+
+                \Filament\Tables\Columns\TextColumn::make('tipo_alquiler')
+                    ->label('Tipo de Alquiler')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('fecha_fin')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('horas')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('monto_total')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('checkin_at')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('checkout_at')
-                    ->dateTime()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('estado'),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+
+                \Filament\Tables\Columns\TextColumn::make('fecha_inicio')
+                    ->label('Fecha de Inicio')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:i'),
+
+                \Filament\Tables\Columns\TextColumn::make('fecha_fin')
+                    ->label('Fecha de Fin')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->dateTime('d/m/Y H:i'),
+
+                \Filament\Tables\Columns\TextColumn::make('monto_total')
+                    ->label('Monto Total')
+                    ->sortable()
+                    ->money('USD'),
+
+                Tables\Columns\TextColumn::make('estado')
+                    ->badge()
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'PENDIENTE' => 'Pendiente',
+                        'EN_CURSO' => 'En Curso',
+                        'FINALIZADO' => 'Finalizado',
+                        default => 'Desconocido',
+                    })
+                    ->color(fn(?string $state): string => match ($state) {
+                        'FINALIZADO' => 'success',  // Verde
+                        'PENDIENTE' => 'warning',   // Amarillo
+                        'EN_CURSO' => 'danger',     // Rojo
+                        default => 'secondary',     // Gris si el estado no es reconocido
+                    }),
+            ])
+            ->filters([
+                \Filament\Tables\Filters\SelectFilter::make('estado')
+                    ->label('Estado')
+                    ->options([
+                        'pendiente' => 'Pendiente',
+                        'en_curso' => 'En Curso',
+                        'finalizado' => 'Finalizado',
+                    ]),
             ])
             ->filters([
                 //
