@@ -38,7 +38,6 @@ class Habitacion extends Model
         );
     }
 
-
     /**
      * Método para marcar la habitación como ocupada.
      */

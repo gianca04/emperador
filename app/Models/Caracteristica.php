@@ -15,7 +15,6 @@ class Caracteristica extends Model
         'name',
         'activa',
         'precio',
-        'icono',
         'removible',
     ];
 
@@ -75,7 +74,11 @@ class Caracteristica extends Model
         return $this->belongsToMany(HabitacionTipo::class, 'habitacion_caracteristica');
     }
 
-    
+    public function alquileres(): BelongsToMany
+    {
+        return $this->belongsToMany(HabitacionTipo::class, 'alquiler_caracteristica');
+    }
+
 
     /**
      * Formateo del nombre con el precio.

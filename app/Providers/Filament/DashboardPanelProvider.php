@@ -77,9 +77,11 @@ class DashboardPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->plugin(\TomatoPHP\FilamentTranslationsGoogle\FilamentTranslationsGooglePlugin::make())
             ->authMiddleware([
                 Authenticate::class,
             ]);
+            
     }
 
 }

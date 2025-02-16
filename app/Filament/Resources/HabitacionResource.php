@@ -24,8 +24,9 @@ class HabitacionResource extends Resource
 {
     protected static ?string $model = Habitacion::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
+    protected static ?string $navigationIcon = 'icon-habitacion';
+    protected static ?string $navigationLabel = 'Habitaciones';
+    protected static ?string $navigationGroup = 'Gestión de Habitaciones';
 
     public static function form(Form $form): Form
     {
@@ -88,29 +89,34 @@ class HabitacionResource extends Resource
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
                             if (!$state) {
+
                                 $set('caracteristicas', []);
-                                $set('precio_caracteristicas', 0);
-                                $set('precio_final', (float) $get('precio_base'));
+                                $set('precio_base', null);
+                                $set('precio_caracteristicas', null);
+                                $set('precio_final', null);
                                 return;
                             }
 
                             $tipoHabitacion = HabitacionTipo::find($state);
                             if ($tipoHabitacion) {
+                                // Recuperamos directamente los precios desde la base de datos
+                                $set('precio_base', $tipoHabitacion->precio_base);
+                                $set('precio_caracteristicas', $tipoHabitacion->precio_caracteristicas);
+                                $set('precio_final', $tipoHabitacion->precio_final);
+
+                                // Recuperamos las características asociadas
                                 $caracteristicas = $tipoHabitacion->caracteristicas()->pluck('caracteristicas.id')->toArray();
                                 $set('caracteristicas', $caracteristicas);
-
-                                $total = (float) Caracteristica::whereIn('id', $caracteristicas)->sum('precio');
-                                $set('precio_caracteristicas', $total);
                             } else {
                                 $set('caracteristicas', []);
-                                $set('precio_caracteristicas', 0);
+                                $set('precio_base', null);
+                                $set('precio_caracteristicas', null);
+                                $set('precio_final', null);
                             }
 
                             $set('precio_final', (float) $get('precio_base') + (float) $get('precio_caracteristicas'));
                         })
                         ->validationMessages(['required' => 'Selecciona un tipo de habitación.']),
-
-
                 ]),
 
             Forms\Components\Section::make('Detalles de la Habitación')
@@ -136,10 +142,17 @@ class HabitacionResource extends Resource
                                         ($caracteristica->precio == 0.00 ? "Incluida" : "S/ {$caracteristica->precio}"),
                                 ])
                         )
-                        ->afterStateUpdated(
-                            fn($state, callable $set, callable $get) =>
-                            $set('precio_caracteristicas', (float) Caracteristica::whereIn('id', $state)->sum('precio'))
-                        )
+                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                            // Calcular la suma de los precios de las caracteristicas selecionadas
+                            $caracteristicasPrecios = Caracteristica::whereIn('id', $state)->pluck('precio');
+
+                            // Actualizar el campo de precio de características seleccionds
+                            $precioCaracteristicas = $caracteristicasPrecios->sum();
+
+                            // Recalcular el precio final
+                            $set('precio_caracteristicas', $precioCaracteristicas);
+                            $set('precio_final', (float) $get('precio_base') + $precioCaracteristicas);
+                        })
                         ->validationMessages(['array' => 'Las características deben ser una lista válida.']),
 
                     Forms\Components\Textarea::make('descripcion')
@@ -147,6 +160,21 @@ class HabitacionResource extends Resource
                         ->placeholder('Ejemplo: Habitación con vista al mar y baño privado.')
                         ->maxLength(255)
                         ->validationMessages(['max' => 'La descripción no debe exceder los 255 caracteres.']),
+                ]),
+
+            Forms\Components\Section::make('Mantenimiento')
+                ->columns(2)
+                ->description('Datos sobre la última limpieza y notas adicionales.')
+                ->schema([
+                    Forms\Components\DateTimePicker::make('ultima_limpieza')
+                        ->label('Última Limpieza')
+                        ->placeholder('Selecciona la fecha y hora')
+                        ->validationMessages(['date' => 'Debe ser una fecha válida.']),
+
+                    Forms\Components\Textarea::make('notas')
+                        ->label('Notas Adicionales')
+                        ->placeholder('Ejemplo: Falta reponer toallas en el baño.')
+                        ->maxLength(255),
                 ]),
 
             Forms\Components\Section::make('Precios y Costos')
@@ -173,8 +201,7 @@ class HabitacionResource extends Resource
                         ->label('Costo por Características')
                         ->numeric()
                         ->default(0.00)
-                        ->prefix('S/')
-                        ->disabled(),
+                        ->prefix('S/'),
 
                     Forms\Components\TextInput::make('precio_final')
                         ->label('Precio Final')
@@ -189,20 +216,7 @@ class HabitacionResource extends Resource
                         ]),
                 ]),
 
-            Forms\Components\Section::make('Mantenimiento')
-                ->columns(2)
-                ->description('Datos sobre la última limpieza y notas adicionales.')
-                ->schema([
-                    Forms\Components\DateTimePicker::make('ultima_limpieza')
-                        ->label('Última Limpieza')
-                        ->placeholder('Selecciona la fecha y hora')
-                        ->validationMessages(['date' => 'Debe ser una fecha válida.']),
 
-                    Forms\Components\Textarea::make('notas')
-                        ->label('Notas Adicionales')
-                        ->placeholder('Ejemplo: Falta reponer toallas en el baño.')
-                        ->maxLength(255),
-                ]),
         ]);
     }
 
@@ -213,58 +227,58 @@ class HabitacionResource extends Resource
 
             ->columns([
 
-                        Tables\Columns\TextColumn::make('numero')
-                            ->searchable()
-                            ->label('Número')
-                            ->size(TextColumn\TextColumnSize::Large),
-                        //->weight(FontWeight::Bold),
+                Tables\Columns\TextColumn::make('numero')
+                    ->searchable()
+                    ->label('Número')
+                    ->size(TextColumn\TextColumnSize::Large),
+                //->weight(FontWeight::Bold),
 
-                        Tables\Columns\TextColumn::make('estado')
-                            ->badge()
-                            ->color(fn(string $state): string => match ($state) {
-                                'Disponible' => 'success', // Verde para habitaciones listas
-                                'Por limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
-                                'Deshabilitada' => 'gray', // Gris para habitaciones fuera de servicio
-                                'En Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
-                                'Ocupada' => 'danger', // Rojo para habitaciones en reparación
-                                default => 'secondary', // Color por defecto si hay valores inesperados
-                            }),
+                Tables\Columns\TextColumn::make('estado')
+                    ->badge()
+                    ->color(fn(string $state): string => match ($state) {
+                        'Disponible' => 'success', // Verde para habitaciones listas
+                        'Por limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
+                        'Deshabilitada' => 'gray', // Gris para habitaciones fuera de servicio
+                        'En Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
+                        'Ocupada' => 'danger', // Rojo para habitaciones en reparación
+                        default => 'secondary', // Color por defecto si hay valores inesperados
+                    }),
 
-                        Tables\Columns\TextColumn::make('tipo.name')
-                            ->sortable(),
+                Tables\Columns\TextColumn::make('tipo.name')
+                    ->sortable(),
 
 
-                        Tables\Columns\TextColumn::make('tipo.capacidad')
-                            ->label('Capacidad')
-                            ->sortable()
-                            ->icon('heroicon-s-user-group'),
+                Tables\Columns\TextColumn::make('tipo.capacidad')
+                    ->label('Capacidad')
+                    ->sortable()
+                    ->icon('heroicon-s-user-group'),
 
-                        Tables\Columns\TextColumn::make('ubicacion')
-                            ->prefix('Piso: ')
-                            ->icon('heroicon-s-building-office'),
+                Tables\Columns\TextColumn::make('ubicacion')
+                    ->prefix('Piso: ')
+                    ->icon('heroicon-s-building-office'),
 
-                        Tables\Columns\TextColumn::make('precio_base')
-                            ->numeric()
-                            ->prefix('S/ ')
-                            ->sortable(),
-                        Tables\Columns\TextColumn::make('precio_final')
-                            ->numeric()
-                            ->prefix('S/ ')
-                            ->sortable(),
-                        Tables\Columns\TextColumn::make('ultima_limpieza')
-                            ->dateTime()
-                            ->sortable(),
-                        Tables\Columns\TextColumn::make('created_at')
-                            ->dateTime()
-                            ->sortable()
-                            ->toggleable(isToggledHiddenByDefault: true),
-                        Tables\Columns\TextColumn::make('updated_at')
-                            ->dateTime()
-                            ->sortable()
-                            ->toggleable(isToggledHiddenByDefault: true),
-                    ])
+                Tables\Columns\TextColumn::make('precio_base')
+                    ->numeric()
+                    ->prefix('S/ ')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('precio_final')
+                    ->numeric()
+                    ->prefix('S/ ')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('ultima_limpieza')
+                    ->dateTime()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
 
-            
+
 
             ->filters([
                 //

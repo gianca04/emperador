@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class HabitacionTipo extends Model
 {
-    protected $fillable = ['name', 'precio_base', 'activa', 'capacidad'];
+    protected $fillable = ['name', 'precio_base', 'precio_caracteristicas', 'precio_final', 'activa', 'capacidad'];
 
     protected $casts = [
         'precio_base' => 'decimal:2', // Garantiza dos decimales
+        'precio_caracteristicas' => 'decimal:2',
+        'precio_final' => 'decimal:2',
         'activa' => 'boolean',
     ];
 

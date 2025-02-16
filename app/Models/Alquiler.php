@@ -36,6 +36,17 @@ class Alquiler extends Model
      */
     public function habitacion(): BelongsTo
     {
-        return $this->belongsTo(Habitacion::class);
+        return $this->belongsTo(Habitacion::class, 'habitacion_id');
     }
+
+    public function caracteristicas()
+    {
+        return $this->belongsToMany(Caracteristica::class, 'alquiler_caracteristica', 'alquiler_id', 'caracteristica_id');
+    }
+
+    public function getCaracteristicaHabitcion()
+    {
+        return $this->habitacion ? $this->habitacion->caracteristicas : collect();
+    }
+
 }

@@ -3,22 +3,22 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\HabitacionTipoResource\Pages;
-use App\Filament\Resources\HabitacionTipoResource\RelationManagers;
 use App\Models\HabitacionTipo;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-
 
 class HabitacionTipoResource extends Resource
 {
     protected static ?string $model = HabitacionTipo::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'icon-room';
+
+    protected static ?string $navigationLabel = 'Habitación Tipos';
+
+    protected static ?string $navigationGroup = 'Gestión de Habitaciones';
 
     public static function form(Form $form): Form
     {
@@ -44,37 +44,12 @@ class HabitacionTipoResource extends Resource
                             ->required()
                             ->numeric()
                             ->minValue(1)
+                            ->prefixIcon('heroicon-s-user-group')
                             ->default(1)
                             ->validationMessages([
                                 'required' => 'Debe especificar la capacidad.',
                                 'numeric' => 'Debe ingresar un número válido.',
                                 'min' => 'La capacidad mínima es 1 persona.',
-                            ]),
-                    ]),
-
-                Forms\Components\Section::make('Precios y Estado')
-                    ->columns(2)
-                    ->description('Configura el precio y disponibilidad de la habitación.')
-                    ->schema([
-                        Forms\Components\TextInput::make('precio_base')
-                            ->label('Precio Base (S/.)')
-                            ->placeholder('Ejemplo: 150.00')
-                            ->required()
-                            ->numeric()
-                            ->default(0.00)
-                            ->prefix('S/.')
-                            ->validationMessages([
-                                'required' => 'Debe ingresar el precio base.',
-                                'numeric' => 'El precio debe ser un número válido.',
-                                'min' => 'El precio no puede ser negativo.',
-                            ]),
-
-                        Forms\Components\Toggle::make('activa')
-                            ->label('Disponible')
-                            ->default(true)
-                            ->required()
-                            ->validationMessages([
-                                'required' => 'Debe especificar si la habitación está activa o no.',
                             ]),
                     ]),
 
@@ -97,19 +72,72 @@ class HabitacionTipoResource extends Resource
                                 'exists' => 'Alguna de las características seleccionadas no es válida.',
                             ]),
                     ]),
+
+                Forms\Components\Section::make('Precios y Estado')
+                    ->columns(3)
+                    ->description('Configura el precio y disponibilidad de la habitación.')
+                    ->schema([
+                        Forms\Components\TextInput::make('precio_base')
+                            ->label('Precio Base (S/)')
+                            ->placeholder('Ejemplo: 150.00')
+                            ->required()
+                            ->numeric()
+                            ->default(0.00)
+                            ->prefix('S/')
+                            ->validationMessages([
+                                'required' => 'Debe ingresar el precio base.',
+                                'numeric' => 'El precio debe ser un número válido.',
+                                'min' => 'El precio no puede ser negativo.',
+                            ]),
+
+                        Forms\Components\TextInput::make('precio_caracteristicas')
+                            ->label('Precio de características (S/)')
+                            ->placeholder('Ejemplo: 150.00')
+                            ->required()
+                            ->numeric()
+                            ->default(0.00)
+                            ->prefix('S/')
+                            ->validationMessages([
+                                'required' => 'Debe ingresar el precio base.',
+                                'numeric' => 'El precio debe ser un número válido.',
+                                'min' => 'El precio no puede ser negativo.',
+                            ]),
+
+                        Forms\Components\TextInput::make('precio_final')
+                            ->label('Precio final por noche. (S/)')
+                            ->placeholder('Ejemplo: 150.00')
+                            ->required()
+                            ->numeric()
+                            ->default(0.00)
+                            ->prefix('S/')
+                            ->validationMessages([
+                                'required' => 'Debe ingresar el precio base.',
+                                'numeric' => 'El precio debe ser un número válido.',
+                                'min' => 'El precio no puede ser negativo.',
+                            ]),
+
+                        Forms\Components\Toggle::make('activa')
+                            ->label('Disponible')
+                            ->default(true)
+                            ->required()
+                            ->validationMessages([
+                                'required' => 'Debe especificar si la habitación está activa o no.',
+                            ]),
+                    ]),
             ]);
     }
-
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-
-
-
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
+
+                Tables\Columns\TextColumn::make('capacidad')
+                    ->label('Capacidad')
+                    ->sortable()
+                    ->icon('heroicon-s-user-group'),
 
                 Tables\Columns\TextColumn::make('caracteristicas.name')
                     ->label('Características')
@@ -127,8 +155,7 @@ class HabitacionTipoResource extends Resource
                     ->formatStateUsing(fn($state) => $state == 0 || $state === null ? 'Incluida' : 'S/ ' . number_format($state, 2))
                     ->color(fn($state) => $state == 0 || $state === null ? 'success' : 'gray'),
 
-
-                Tables\Columns\TextColumn::make('costo_total_caracteristicas')
+                Tables\Columns\TextColumn::make('precio_caracteristicas')
                     ->sortable()
                     ->label('Costo de Caracteristicas')
                     ->prefix('S/ '),
@@ -139,7 +166,7 @@ class HabitacionTipoResource extends Resource
                     ->prefix('S/ '),
 
 
-                Tables\Columns\TextColumn::make('costo_total')
+                Tables\Columns\TextColumn::make('precio_final')
                     ->label('Costo Total')
                     ->prefix('S/ ') // Agregar el símbolo de soles
                     ->sortable(),
@@ -156,7 +183,12 @@ class HabitacionTipoResource extends Resource
             ])
 
             ->filters([
-                //
+
+                Tables\Filters\TernaryFilter::make('activa')
+                    ->label('Estado De Tipo de habitación')
+                    ->trueLabel('Activa')
+                    ->falseLabel('Inactiva')
+                    ->native(false),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

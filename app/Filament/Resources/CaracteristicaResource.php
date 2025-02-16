@@ -12,15 +12,15 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use PhpParser\Node\Stmt\Label;
 
 class CaracteristicaResource extends Resource
 {
 
     protected static ?string $model = Caracteristica::class;
 
-    protected static ?string $navigationIcon = 'icon-label-icon'; // Usa el icono personalizado
-
-
+    protected static ?string $navigationIcon = 'icon-caracteristicas'; // Usa el icono personalizado
+    protected static ?string $navigationGroup = 'Gestión de Habitaciones';
 
     public static function beforeSave($record, array $data)
     {
@@ -77,40 +77,18 @@ class CaracteristicaResource extends Resource
                             ->label('¿Es removible?')
                             ->required(),
                     ]),
-
-                Forms\Components\Section::make('Imagen Representativa')
-                    ->description('Sube un ícono para representar la característica.')
-                    ->schema([
-                        Forms\Components\FileUpload::make('icono')
-                            ->label('Ícono representativo')
-                            ->image()
-                            ->imageEditor()
-                            ->directory('caracteristicas/iconos')
-                            ->maxSize(1024) // 1MB
-                            ->validationMessages([
-                                'image' => 'El archivo debe ser una imagen válida.',
-                                'max' => 'El archivo no debe exceder 1MB.',
-                            ]),
-                    ]),
             ]);
     }
-
-
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->searchable()
+                    ->searchable()
+                    ->sortable(),
+
 
                 Tables\Columns\TextColumn::make('precio')
                     ->money('PEN') // Formatea como moneda (Peruvian Sol)
@@ -119,16 +97,38 @@ class CaracteristicaResource extends Resource
                     ->formatStateUsing(fn($state) => $state == 0 || $state === null ? 'Incluida' : 'S/ ' . number_format($state, 2))
                     ->color(fn($state) => $state == 0 || $state === null ? 'success' : 'gray'),
 
-                Tables\Columns\TextColumn::make('icono')
-                    ->searchable(),
                 Tables\Columns\IconColumn::make('activa')
-                    ->boolean(),
+                    ->boolean()
+                    ->label('Activo'),
+
                 Tables\Columns\IconColumn::make('removible')
                     ->boolean(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
             ])
             ->filters([
-                //
+
+                Tables\Filters\TernaryFilter::make('activa')
+                    ->label('Estado De Caracteristica')
+                    ->trueLabel('Activa')
+                    ->falseLabel('Inactiva')
+                    ->native(false),
+
+                Tables\Filters\TernaryFilter::make('removible')
+                    ->label('Caracteristica Removible')
+                    ->trueLabel('Sí')
+                    ->falseLabel('No'),
             ])
+
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])

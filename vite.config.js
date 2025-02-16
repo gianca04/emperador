@@ -10,10 +10,10 @@ export default defineConfig({
     ],
     server: {
         host: '0.0.0.0', // Permite que sea accesible desde la red
-        port: 5173, // Puerto de Vite
+        port: 8181, // Puerto de Vite
         strictPort: true, // Usa siempre este puerto
         hmr: {
-            host: '192.168.18.39' // Reemplaza con la IP de tu máquina
+            host: '192.168.18.31' // Reemplaza con la IP de tu máquina
         }
     }
 });
