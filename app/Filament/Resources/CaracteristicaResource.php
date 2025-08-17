@@ -87,6 +87,7 @@ class CaracteristicaResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->searchable()
+                    ->extraAttributes(['class' => 'font-bold'])
                     ->sortable(),
 
 
@@ -125,12 +126,21 @@ class CaracteristicaResource extends Resource
 
                 Tables\Filters\TernaryFilter::make('removible')
                     ->label('Caracteristica Removible')
-                    ->trueLabel('Sí')
-                    ->falseLabel('No'),
+                    ->trueLabel(trueLabel: 'Sí')
+                    ->falseLabel('No')
+                    ->native(false),
             ])
 
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->color('info'),
+                Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('primary'),
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->color('danger'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -143,6 +153,7 @@ class CaracteristicaResource extends Resource
     {
         return [
             //
+
         ];
     }
 

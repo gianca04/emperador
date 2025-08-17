@@ -17,9 +17,11 @@ class Habitacion extends Model
         'numero',
         'estado',
         'descripcion',
+        'habitacion_tipo_id',
         'notas',
         'ubicacion',
         'precio_base',
+        'precio_caracteristicas',
         'precio_final',
         'ultima_limpieza',
     ];
@@ -59,6 +61,12 @@ class Habitacion extends Model
     {
         return $this->belongsTo(HabitacionTipo::class, 'habitacion_tipo_id');
     }
+
+    public function getTipoNombre(): string
+    {
+        return $this->tipo?->name ?? 'No definido';
+    }
+    
 
     /**
      * Método para actualizar la fecha de última limpieza.

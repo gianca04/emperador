@@ -9,14 +9,17 @@ use App\Filament\Resources\AlquilerResource\RelationManagers;
 use App\Models\Alquiler;
 use App\Models\Caracteristica;
 use App\Models\Habitacion;
+use App\Models\HabitacionTipo;
+use Carbon\Carbon;
 use Filament\Forms;
-
+use Malzariey\FilamentDaterangepickerFilter\Filters\DateRangeFilter;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 
 
@@ -31,70 +34,102 @@ class AlquilerResource extends Resource
     protected static ?string $model = Alquiler::class;
 
     protected static ?string $navigationIcon = 'icon-alquiler';
-    protected static ?string $navigationLabel = 'Alquiler';
+    protected static ?string $navigationLabel = 'Alquileres';
 
     public static function form(Form $form): Form
     {
+
+        function calcularFechaFin($fechaInicio, $tipoAlquiler)
+        {
+            if (!$fechaInicio || !$tipoAlquiler) {
+                return null;
+            }
+
+            $fecha = Carbon::parse($fechaInicio);
+
+            return match ($tipoAlquiler) {
+                'HORAS' => $fecha->addHours(2),
+                'DIAS' => $fecha->addDay()->setTime(12, 0, 0),
+                default => null
+            };
+        }
+
+
         return $form->schema([
+
             Section::make('Datos Generales')
                 ->columns(2)
                 ->description('Información principal sobre el alquiler.')
                 ->schema([
 
-                    Forms\Components\Select::make('habitacion_id')
+                    Select::make('habitacion_id')
                         ->label('Habitación')
-                        ->options(Habitacion::pluck('numero', 'id')->toArray())
+                        ->options(Habitacion::pluck('numero', 'id'))
                         ->searchable()
-                        ->live() // Permite actualización dinámica
+                        ->reactive() // o ->live(), según tu versión de Filament
                         ->required()
-                        ->afterStateUpdated(function ($state, callable $set) {
+                        // Se ejecuta cuando el formulario se "hidrata" con los valores existentes (modo edición):
+                        ->afterStateHydrated(function ($state, callable $set) {
                             if (!$state) {
+                                // Si no hay habitacion_id, reiniciamos
                                 $set('caracteristicas', []);
                                 $set('precio_caracteristicas', 0);
+                                $set('habitacionInfo', []);
                                 return;
                             }
 
-                            // Obtener la habitación con sus características cargadas
+                            // Cargar la habitación con sus características
                             $habitacion = Habitacion::with('caracteristicas')->find($state);
 
                             if ($habitacion) {
-                                $caracteristicas = $habitacion->caracteristicas->pluck('id')->toArray();
-                                $set('caracteristicas', $caracteristicas);
-
-                                // Calcular el precio total de las características
-                                $total = $habitacion->caracteristicas->sum('precio');
-                                $set('precio_caracteristicas', $total);
+                                $set('caracteristicas', $habitacion->caracteristicas->pluck('id')->toArray());
+                                $set('precio_caracteristicas', $habitacion->caracteristicas->sum('precio'));
+                                $set('habitacionInfo', $habitacion->toArray());
                             } else {
                                 $set('caracteristicas', []);
                                 $set('precio_caracteristicas', 0);
+                                $set('habitacionInfo', []);
                             }
                         })
-                        ->afterStateUpdated(
-                            fn($state, callable $set) =>
-                            $set('habitacionInfo', Habitacion::find($state)?->toArray() ?? [])
-                        )
+                        // Se ejecuta cada vez que el usuario cambia el select manualmente:
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if (!$state) {
+                                // Si no hay habitacion_id, reiniciamos
+                                $set('caracteristicas', []);
+                                $set('precio_caracteristicas', 0);
+                                $set('habitacionInfo', []);
+                                return;
+                            }
+
+                            // Cargar la habitación con sus características
+                            $habitacion = Habitacion::with('caracteristicas')->find($state);
+
+                            if ($habitacion) {
+                                $set('caracteristicas', $habitacion->caracteristicas->pluck('id')->toArray());
+                                $set('precio_caracteristicas', $habitacion->caracteristicas->sum('precio'));
+                                $set('habitacionInfo', $habitacion->toArray());
+                            } else {
+                                $set('caracteristicas', []);
+                                $set('precio_caracteristicas', 0);
+                                $set('habitacionInfo', []);
+                            }
+                        })
                         ->validationMessages(['required' => 'Selecciona una habitación.']),
 
-                    Select::make('tipo_alquiler')
-                        ->label('Tipo de Alquiler')
-                        ->options([
-                            'HORAS' => 'Por Horas',
-                            'DIAS' => 'Por Días',
-                        ])
-                        ->default('HORAS')
-                        ->required()
-                        ->validationMessages([
-                            'required' => 'Debe seleccionar el tipo de alquiler.',
-                        ]),
 
                     Section::make('Información de la Habitación')
                         ->collapsed()
-                        ->columns(3)
+                        ->columns(4)
                         ->hidden(fn($get) => empty($get('habitacionInfo'))) // Oculta si no hay información
                         ->schema([
                             TextInput::make('habitacionInfo.numero')
                                 ->label('Número de Habitación')
                                 ->disabled(),
+
+                            Placeholder::make('habitacionInfo.habitacion_tipo')
+                                ->label('Tipo de Habitación')
+                                ->content(fn($get) => Habitacion::find($get('habitacion_id'))?->getTipoNombre() ?? 'No definido'),
+
 
                             TextInput::make('habitacionInfo.ubicacion')
                                 ->label('Ubicación')
@@ -123,45 +158,11 @@ class AlquilerResource extends Resource
                                 ->label('Notas')
                                 ->disabled(),
                         ]),
-
-                ]),
-
-            Section::make('Duración del Alquiler')
-                ->description('Defina el período del alquiler, ya sea por horas o días.')
-                ->schema([
-                    DateTimePicker::make('fecha_inicio')
-                        ->label('Fecha de Inicio')
-                        ->required()
-                        ->native(false)
-                        ->default(now())
-                        ->validationMessages([
-                            'required' => 'La fecha de inicio es obligatoria.',
-                        ]),
-
-                    DateTimePicker::make('fecha_fin')
-                        ->label('Fecha de Fin')
-                        ->nullable()
-                        ->after('fecha_inicio')
-                        ->validationMessages([
-                            'after' => 'La fecha de fin debe ser posterior a la fecha de inicio.',
-                        ]),
-
-                    TextInput::make('horas')
-                        ->label('Cantidad de Horas')
-                        ->numeric()
-                        ->minValue(1)
-                        ->nullable()
-                        ->visible(fn($get) => $get('tipo_alquiler') === 'HORAS')
-                        ->placeholder('Ingrese el número de horas')
-                        ->validationMessages([
-                            'numeric' => 'Debe ingresar un número válido.',
-                            'min' => 'Debe ingresar al menos una hora.',
-                        ]),
                 ]),
 
 
             Forms\Components\Section::make('Detalles de la Habitación')
-                ->columns(2)
+
                 ->description('Características de la habitación.')
                 ->schema([
 
@@ -193,7 +194,11 @@ class AlquilerResource extends Resource
                             $habitacion = Habitacion::with('caracteristicas')->find($habitacionId);
 
                             if ($habitacion) {
-                                $caracteristicasNoRemovibles = $habitacion->caracteristicas->where('removible', false)->pluck('id')->toArray();
+                                // Si existen características fijas, se vuelven a agregar en caso de intentar removerlas
+                                $caracteristicasNoRemovibles = $habitacion->caracteristicas
+                                    ->where('removible', false)
+                                    ->pluck('id')
+                                    ->toArray();
 
                                 // Restaurar características fijas eliminadas
                                 $caracteristicasActuales = $state ?? [];
@@ -213,23 +218,130 @@ class AlquilerResource extends Resource
                             }
                         })
                         ->validationMessages(['array' => 'Las características deben ser una lista válida.']),
+                    TextInput::make('precio_caracteristicas')
+                        ->label('Costo Total de las Características')
+                        ->disabled() // Campo no editable
+                        ->prefix('S/')
+                        ->numeric()
+                        ->afterStateHydrated(function ($state, callable $set, callable $get) {
+                            // Al hidratar, sumar los precios de las características ya seleccionadas
+                            $caracteristicas = $get('caracteristicas') ?? [];
+                            $total = Caracteristica::whereIn('id', $caracteristicas)->sum('precio');
+                            $set('precio_caracteristicas', (float) $total);
+                        }),
+
+                ]),
+
+
+            Section::make('Duración del Alquiler')
+                ->columns(3)
+                ->description('Defina el período del alquiler, ya sea por horas o días.')
+                ->schema([
+
+                    Select::make('tipo_alquiler')
+                        ->label('Tipo de Alquiler')
+                        ->options([
+                            'HORAS' => 'Por Horas',
+                            'DIAS' => 'Por Días',
+                        ])
+                        ->required()
+                        ->native(false)
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                            // Si existe fecha_inicio, la usamos como base; sino, usamos la hora actual
+                            $fechaInicio = $get('fecha_inicio')
+                                ? Carbon::parse($get('fecha_inicio'))
+                                : Carbon::now();
+
+                            if ($state === 'HORAS') {
+                                // Sumar 2 horas a la fecha de inicio (o a la hora actual)
+                                $nuevaFechaFin = $fechaInicio->copy()->addHours(2);
+                            } elseif ($state === 'DIAS') {
+                                // Ubicar al mediodía del día siguiente
+                                $nuevaFechaFin = $fechaInicio->copy()->addDay()->setTime(12, 0, 0);
+                            } else {
+                                $nuevaFechaFin = null;
+                            }
+
+                            // Convertir a string para asegurarnos del formato
+                            $set('fecha_fin', $nuevaFechaFin ? $nuevaFechaFin->toDateTimeString() : null);
+                        })
+                        ->validationMessages([
+                            'required' => 'Debe seleccionar el tipo de alquiler.',
+                        ]),
+
+                    // Campo para la fecha de inicio
+                    // Campo para la fecha de inicio
+                    DateTimePicker::make('fecha_inicio')
+                        ->label('Fecha de Inicio')
+                        ->required()
+                        ->default(Carbon::now()->toDateTimeString())
+                        ->reactive()
+                        ->validationMessages([
+                            'required' => 'La fecha de inicio es obligatoria.',
+                        ]),
+
+
+                    // Campo para la fecha de fin (se actualizará desde el select)
+                    DateTimePicker::make('fecha_fin')
+                        ->label('Fecha de Fin')
+                        ->nullable()
+                        ->reactive()
+                        ->validationMessages([
+                            'after' => 'La fecha de fin debe ser posterior a la fecha de inicio.',
+                        ]),
+
+                    TextInput::make('horas')
+                        ->label('Cantidad de Horas')
+                        ->numeric()
+                        ->minValue(1)
+                        ->nullable()
+                        ->visible(fn($get) => $get('tipo_alquiler') === 'HORAS')
+                        ->placeholder('Ingrese el número de horas')
+                        ->validationMessages([
+                            'numeric' => 'Debe ingresar un número válido.',
+                            'min' => 'Debe ingresar al menos una hora.',
+                        ]),
                 ]),
 
             Section::make('Estado y Control de Check-in/Check-out')
                 ->description('Registre la información del check-in y check-out.')
+                ->columns(3)
                 ->schema([
+
+                    // Campo para la fecha de check-in
                     DateTimePicker::make('checkin_at')
                         ->label('Check-in')
-                        ->nullable(),
+                        ->nullable()
+                        ->reactive() // Permite reaccionar a cambios en su valor
+                        ->afterStateUpdated(function ($state, callable $set, $get) {
+                            // Si se registra una fecha de check-in, se actualiza el estado a "en_curso".
+                            // Si se elimina la fecha de check-in, se restablece el estado a "pendiente" y se limpia el check-out.
+                            $set('estado', $state ? 'en_curso' : 'pendiente');
+                            if (!$state) {
+                                $set('checkout_at', null);
+                            }
+                        }),
 
+                    // Campo para la fecha de check-out
                     DateTimePicker::make('checkout_at')
                         ->label('Check-out')
                         ->nullable()
-                        ->after('checkin_at')
+                        ->reactive() // Permite reaccionar a cambios en su valor
+                        // Se deshabilita si no hay fecha de check-in
+                        ->disabled(fn($get) => !$get('checkin_at'))
+                        ->afterStateUpdated(function ($state, callable $set, $get) {
+                            // Si se registra una fecha de check-out y existe un check-in,
+                            // se actualiza el estado a "finalizado".
+                            if ($state && $get('checkin_at')) {
+                                $set('estado', 'finalizado');
+                            }
+                        })
                         ->validationMessages([
                             'after' => 'La fecha de check-out debe ser posterior al check-in.',
                         ]),
 
+                    // Campo de estado del alquiler, mostrado en el formulario pero deshabilitado para evitar cambios manuales.
                     Select::make('estado')
                         ->label('Estado del Alquiler')
                         ->options([
@@ -240,12 +352,11 @@ class AlquilerResource extends Resource
                         ->default('pendiente')
                         ->required()
                         ->native(false)
+                        ->disabled(true) // Se deshabilita para que el usuario no lo modifique manualmente
                         ->validationMessages([
                             'required' => 'Debe seleccionar el estado del alquiler.',
                         ]),
                 ]),
-
-
 
             Section::make('Costo del Alquiler')
                 ->description('Defina el monto total a cobrar por el alquiler.')
@@ -273,15 +384,18 @@ class AlquilerResource extends Resource
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('habitacion.nombre')
                     ->label('Habitación')
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
 
                 \Filament\Tables\Columns\TextColumn::make('tipo_alquiler')
                     ->label('Tipo de Alquiler')
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
 
                 \Filament\Tables\Columns\TextColumn::make('fecha_inicio')
                     ->label('Fecha de Inicio')
                     ->sortable()
+                    ->searchable()
                     ->dateTime('d/m/Y H:i'),
 
                 \Filament\Tables\Columns\TextColumn::make('fecha_fin')
@@ -310,16 +424,15 @@ class AlquilerResource extends Resource
                     }),
             ])
             ->filters([
+                DateRangeFilter::make('created_at'),
                 \Filament\Tables\Filters\SelectFilter::make('estado')
                     ->label('Estado')
                     ->options([
                         'pendiente' => 'Pendiente',
                         'en_curso' => 'En Curso',
                         'finalizado' => 'Finalizado',
-                    ]),
-            ])
-            ->filters([
-                //
+                    ])
+                    ->native(false),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

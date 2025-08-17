@@ -11,19 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('habitacion_caracteristica', function (Blueprint $table) {
+        Schema::create('asistencias', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
-            $table->foreignId('habitacion_tipo_id')->constrained()->onDelete('cascade');
-            $table->foreignId('caracteristica_id')->constrained()->onDelete('cascade');
+            $table->foreignId('estudiante_id')->constrained('estudiantes')->onDelete('cascade');
+            $table->enum('estado', ['falto', 'asistio', 'tardanza']);
+            $table->timestamp('fecha')->default(now());
+            $table->timestamps(); 
         });
     }
-    
+
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('habitacion_caracteristica');
+        Schema::dropIfExists('asistencias');
     }
 };

@@ -69,9 +69,9 @@ class HabitacionResource extends Resource
                         ->label('Estado Actual')
                         ->options([
                             'Disponible' => 'Disponible',
-                            'Por limpiar' => 'Por limpiar',
+                            'Limpiar' => 'Limpiar',
                             'Deshabilitada' => 'Deshabilitada',
-                            'En Mantenimiento' => 'En Mantenimiento',
+                            'Mantenimiento' => 'Mantenimiento',
                             'Ocupada' => 'Ocupada',
                         ])
                         ->searchable()
@@ -218,6 +218,20 @@ class HabitacionResource extends Resource
 
 
         ]);
+
+    }
+
+    protected function beforeSave($record): void
+    {
+        if (!$record->exists) {
+            $record->save(); // Guarda la habitación antes de asignar características
+        }
+    }
+    protected function afterSave($record): void
+    {
+        if (request()->has('data.caracteristicas')) {
+            $record->caracteristicas()->sync(request()->input('data.caracteristicas'));
+        }
     }
 
 
@@ -237,9 +251,9 @@ class HabitacionResource extends Resource
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'Disponible' => 'success', // Verde para habitaciones listas
-                        'Por limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
+                        'Limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
                         'Deshabilitada' => 'gray', // Gris para habitaciones fuera de servicio
-                        'En Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
+                        'Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
                         'Ocupada' => 'danger', // Rojo para habitaciones en reparación
                         default => 'secondary', // Color por defecto si hay valores inesperados
                     }),

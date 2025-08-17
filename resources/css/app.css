@@ -1,4 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Flowbite custom styles */
+@layer components {
+  /* Aquí puedes agregar estilos personalizados de Flowbite si los necesitas */
+}
+
 @custom-variant dark (&:where(.dark, .dark *));

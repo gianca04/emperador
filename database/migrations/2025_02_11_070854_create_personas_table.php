@@ -12,10 +12,10 @@ return new class extends Migration {
     {
         Schema::create('personas', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre', 100);
-            $table->string('apellido', 100);
-            $table->enum('tipo_documento', ['DNI','CARNET EXT', 'PASAPORTE', 'OTROS']);
-            $table->string('numero_documento', 15);
+            $table->string('nombre', 100)->nullable();
+            $table->string('apellido', 100)->nullable();
+            $table->enum('tipo_documento', ['DNI','CARNET EXT', 'PASAPORTE', 'OTROS'])->nullable();
+            $table->string('numero_documento', 15)->nullable();
             $table->string('email')->unique()->nullable();
             $table->string('telefono', 9)->nullable();
             $table->string('telefono_secundario', 9)->nullable();
@@ -23,7 +23,7 @@ return new class extends Migration {
         });
     }
 
-    
+
 
     /**
      * Reverse the migrations.

@@ -21,7 +21,7 @@ class Caracteristica extends Model
     protected $casts = [
         'activa' => 'boolean',
         'removible' => 'boolean',
-        'precio' => 'decimal:2',
+        'precio' => 'float',
     ];
 
     /**

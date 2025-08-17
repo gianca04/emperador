@@ -34,6 +34,11 @@ class Alquiler extends Model
     /**
      * Relación con la habitación.
      */
+
+    public function calcularPrecio(){
+        
+    }
+
     public function habitacion(): BelongsTo
     {
         return $this->belongsTo(Habitacion::class, 'habitacion_id');

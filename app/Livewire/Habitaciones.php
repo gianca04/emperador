@@ -56,9 +56,9 @@ class Habitaciones extends Component implements HasForms, HasTable
                             ->badge()
                             ->color(fn(string $state): string => match ($state) {
                                 'Disponible' => 'success', // Verde para habitaciones listas
-                                'Por limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
+                                'Limpiar' => 'warning', // Amarillo para habitaciones que requieren limpieza
                                 'Deshabilitada' => 'gray', // Gris para habitaciones fuera de servicio
-                                'En Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
+                                'Mantenimiento' => 'danger', // Rojo para habitaciones en reparación
                                 default => 'secondary', // Color por defecto si hay valores inesperados
                             }),
 

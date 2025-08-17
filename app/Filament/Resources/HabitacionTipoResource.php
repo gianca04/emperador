@@ -93,9 +93,8 @@ class HabitacionTipoResource extends Resource
                         Forms\Components\TextInput::make('precio_caracteristicas')
                             ->label('Precio de características (S/)')
                             ->placeholder('Ejemplo: 150.00')
-                            ->required()
                             ->numeric()
-                            ->default(0.00)
+                            ->default(0)
                             ->prefix('S/')
                             ->validationMessages([
                                 'required' => 'Debe ingresar el precio base.',
@@ -106,7 +105,6 @@ class HabitacionTipoResource extends Resource
                         Forms\Components\TextInput::make('precio_final')
                             ->label('Precio final por noche. (S/)')
                             ->placeholder('Ejemplo: 150.00')
-                            ->required()
                             ->numeric()
                             ->default(0.00)
                             ->prefix('S/')
@@ -132,6 +130,8 @@ class HabitacionTipoResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Nombre')
+                    ->extraAttributes(['class' => 'font-bold'])
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('capacidad')
@@ -191,7 +191,15 @@ class HabitacionTipoResource extends Resource
                     ->native(false),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->color('info'),
+                Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('primary'),
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->color('danger'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

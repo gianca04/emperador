@@ -8,7 +8,7 @@ class AddFieldsToUsersTable extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('dni', 8)->unique(); // DNI obligatorio y único
+            $table->string('dni', 8)->unique()->nullable(); // DNI obligatorio y único
             $table->string('apellido')->nullable(); // Apellido opcional
             $table->string('nombre')->nullable(); // Nombre opcional
             $table->date('nacimiento')->nullable(); // Fecha de nacimiento opcional

@@ -14,12 +14,12 @@ return new class extends Migration {
         Schema::create('habitaciones', function (Blueprint $table) {
             $table->id();
             $table->string('numero')->unique()->index();
-            $table->enum('estado', ['Disponible', 'Ocupada', 'Por limpiar', 'Deshabilitada', 'En Mantenimiento'])->default('Disponible');
-            $table->text('descripcion');
+            $table->enum('estado', ['Disponible', 'Ocupada', 'Limpiar', 'Deshabilitada', 'Mantenimiento'])->default('Disponible');
+            $table->text('descripcion')->nullable();
             $table->foreignId('habitacion_tipo_id')->constrained()->onDelete('cascade');
             $table->text('notas')->nullable();
             $table->integer('capacidad')->default(1);
-            $table->enum('ubicacion', ['Segundo Piso', 'Tercer Piso', 'Cuarto Piso', 'Quinto Piso', 'En Mantenimiento']);
+            $table->enum('ubicacion', ['Segundo Piso', 'Tercer Piso', 'Cuarto Piso', 'Quinto Piso', 'Mantenimiento'])->nullable();
             $table->decimal('precio_base', 10, 2)->default(0);
             $table->decimal('precio_final', 10, 2)->default(0);
             $table->timestamp('ultima_limpieza')->nullable();
