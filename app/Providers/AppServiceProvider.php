@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\HabitacionTipo;
+use App\Observers\HabitacionTipoObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Registrar el Observer para HabitacionTipo
+        HabitacionTipo::observe(HabitacionTipoObserver::class);
     }
 }

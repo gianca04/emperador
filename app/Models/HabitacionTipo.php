@@ -26,22 +26,67 @@ class HabitacionTipo extends Model
         return $this->belongsToMany(Caracteristica::class, 'habitacion_tipo_caracteristica');
     }
 
-    public function getCostoTotalAttribute()
+    /**
+     * Calcula automáticamente el precio final basado en precio base + características
+     */
+    public function calcularPrecioFinal(): void
     {
+        // Asegurar que las características estén cargadas
         if (!$this->relationLoaded('caracteristicas')) {
             $this->load('caracteristicas');
         }
 
-        return round((float) $this->precio_base + $this->caracteristicas->sum('precio'), 2);
+        // Calcular el precio total de las características
+        $precioCaracteristicas = $this->caracteristicas->sum('precio');
+
+        // Actualizar el campo precio_caracteristicas
+        $this->precio_caracteristicas = round($precioCaracteristicas, 2);
+
+        // Calcular y asignar el precio final
+        $this->precio_final = round((float) $this->precio_base + $precioCaracteristicas, 2);
     }
 
-    public function getCostoTotalCaracteristicasAttribute()
+    /**
+     * Recalcula el precio final y lo guarda en la base de datos
+     */
+    public function recalcularYGuardarPrecio(): bool
     {
-        if (!$this->relationLoaded('caracteristicas')) {
-            $this->load('caracteristicas');
-        }
+        $this->calcularPrecioFinal();
+        return $this->save();
+    }
 
-        return round($this->caracteristicas->sum('precio'), 2);
+    /**
+     * Accessor para obtener el costo total (alias del precio final)
+     */
+    public function getCostoTotalAttribute(): float
+    {
+        return (float) $this->precio_final;
+    }
+
+    /**
+     * Accessor para obtener solo el costo de las características
+     */
+    public function getCostoTotalCaracteristicasAttribute(): float
+    {
+        return (float) $this->precio_caracteristicas;
+    }
+
+    /**
+     * Scope para obtener tipos de habitación activas
+     */
+    public function scopeActivas($query)
+    {
+        return $query->where('activa', true);
+    }
+
+    /**
+     * Método para sincronizar características y recalcular precio
+     */
+    public function sincronizarCaracteristicas(array $caracteristicasIds): void
+    {
+        $this->caracteristicas()->sync($caracteristicasIds);
+        $this->refresh(); // Recargar el modelo con las nuevas relaciones
+        $this->recalcularYGuardarPrecio();
     }
 
     /**

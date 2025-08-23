@@ -68,6 +68,20 @@ class HabitacionTipoResource extends Resource
                                 ])
                             )
                             ->helperText('Seleccione una o más características disponibles para esta habitación.')
+                            ->live() // Hacer que el campo sea reactivo
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                // Recalcular precios cuando cambien las características
+                                $precioBase = (float) ($get('precio_base') ?? 0);
+                                $precioCaracteristicas = 0;
+
+                                if (!empty($state)) {
+                                    $caracteristicas = \App\Models\Caracteristica::whereIn('id', $state)->get();
+                                    $precioCaracteristicas = $caracteristicas->sum('precio');
+                                }
+
+                                $set('precio_caracteristicas', number_format($precioCaracteristicas, 2, '.', ''));
+                                $set('precio_final', number_format($precioBase + $precioCaracteristicas, 2, '.', ''));
+                            })
                             ->validationMessages([
                                 'exists' => 'Alguna de las características seleccionadas no es válida.',
                             ]),
@@ -84,6 +98,21 @@ class HabitacionTipoResource extends Resource
                             ->numeric()
                             ->default(0.00)
                             ->prefix('S/')
+                            ->live(onBlur: true) // Actualizar cuando pierde el foco
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                // Recalcular precios cuando cambie el precio base
+                                $precioBase = (float) ($state ?? 0);
+                                $caracteristicasIds = $get('caracteristicas') ?? [];
+                                $precioCaracteristicas = 0;
+
+                                if (!empty($caracteristicasIds)) {
+                                    $caracteristicas = \App\Models\Caracteristica::whereIn('id', $caracteristicasIds)->get();
+                                    $precioCaracteristicas = $caracteristicas->sum('precio');
+                                }
+
+                                $set('precio_caracteristicas', number_format($precioCaracteristicas, 2, '.', ''));
+                                $set('precio_final', number_format($precioBase + $precioCaracteristicas, 2, '.', ''));
+                            })
                             ->validationMessages([
                                 'required' => 'Debe ingresar el precio base.',
                                 'numeric' => 'El precio debe ser un número válido.',
@@ -92,27 +121,21 @@ class HabitacionTipoResource extends Resource
 
                         Forms\Components\TextInput::make('precio_caracteristicas')
                             ->label('Precio de características (S/)')
-                            ->placeholder('Ejemplo: 150.00')
+                            ->placeholder('Se calcula automáticamente')
                             ->numeric()
-                            ->default(0)
+                            ->readOnly()
                             ->prefix('S/')
-                            ->validationMessages([
-                                'required' => 'Debe ingresar el precio base.',
-                                'numeric' => 'El precio debe ser un número válido.',
-                                'min' => 'El precio no puede ser negativo.',
-                            ]),
+                            ->helperText('Este valor se calcula automáticamente basado en las características seleccionadas.')
+                            ->extraAttributes(['class' => 'bg-gray-50']),
 
                         Forms\Components\TextInput::make('precio_final')
-                            ->label('Precio final por noche. (S/)')
-                            ->placeholder('Ejemplo: 150.00')
+                            ->label('Precio final por noche (S/)')
+                            ->placeholder('Se calcula automáticamente')
                             ->numeric()
-                            ->default(0.00)
+                            ->readOnly()
                             ->prefix('S/')
-                            ->validationMessages([
-                                'required' => 'Debe ingresar el precio base.',
-                                'numeric' => 'El precio debe ser un número válido.',
-                                'min' => 'El precio no puede ser negativo.',
-                            ]),
+                            ->helperText('Precio base + precio de características.')
+                            ->extraAttributes(['class' => 'bg-gray-50']),
 
                         Forms\Components\Toggle::make('activa')
                             ->label('Disponible')
@@ -130,54 +153,73 @@ class HabitacionTipoResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nombre')
-                    ->extraAttributes(['class' => 'font-bold'])
-                    ->searchable(),
+                    ->label('Tipo de Habitación')
+                    ->extraAttributes(['class' => 'font-bold text-primary-600'])
+                    ->searchable()
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('capacidad')
                     ->label('Capacidad')
                     ->sortable()
-                    ->icon('heroicon-s-user-group'),
+                    ->icon('heroicon-s-user-group')
+                    ->iconColor('primary')
+                    ->suffix(' personas')
+                    ->alignment('center'),
+
+                Tables\Columns\TextColumn::make('precio_base')
+                    ->label('Precio Base')
+                    ->money('PEN')
+                    ->sortable()
+                    ->color('success')
+                    ->alignment('right'),
+
+                Tables\Columns\TextColumn::make('precio_caracteristicas')
+                    ->label('Precio Características')
+                    ->money('PEN')
+                    ->sortable()
+                    ->color('warning')
+                    ->alignment('right')
+                    ->formatStateUsing(fn($state) => $state == 0 || $state === null ? 'S/ 0.00' : 'S/ ' . number_format($state, 2)),
+
+                Tables\Columns\TextColumn::make('precio_final')
+                    ->label('Precio Final/Noche')
+                    ->money('PEN')
+                    ->sortable()
+                    ->color('primary')
+                    ->weight('bold')
+                    ->alignment('right')
+                    ->formatStateUsing(fn($state) => 'S/ ' . number_format($state, 2)),
 
                 Tables\Columns\TextColumn::make('caracteristicas.name')
                     ->label('Características')
                     ->listWithLineBreaks()
                     ->badge()
-                    ->sortable()
-                    ->alignment('right'),
+                    ->limit(3)
+                    ->tooltip(function ($record) {
+                        $caracteristicas = $record->caracteristicas;
+                        if ($caracteristicas->count() <= 3) return null;
 
-                Tables\Columns\TextColumn::make('caracteristicas.precio')
-                    ->label(' S/ ')
-                    ->money('PEN') // Formatea como moneda (Peruvian Sol)
-                    ->sortable()
-                    ->listWithLineBreaks()
-                    ->badge()
-                    ->formatStateUsing(fn($state) => $state == 0 || $state === null ? 'Incluida' : 'S/ ' . number_format($state, 2))
-                    ->color(fn($state) => $state == 0 || $state === null ? 'success' : 'gray'),
+                        return $caracteristicas->skip(3)->pluck('name')->join(', ');
+                    }),
 
-                Tables\Columns\TextColumn::make('precio_caracteristicas')
-                    ->sortable()
-                    ->label('Costo de Caracteristicas')
-                    ->prefix('S/ '),
-
-                Tables\Columns\TextColumn::make('precio_base')
-                    ->sortable()
-                    ->label('Precio Base')
-                    ->prefix('S/ '),
-
-
-                Tables\Columns\TextColumn::make('precio_final')
-                    ->label('Costo Total')
-                    ->prefix('S/ ') // Agregar el símbolo de soles
-                    ->sortable(),
+                Tables\Columns\IconColumn::make('activa')
+                    ->label('Estado')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->alignment('center'),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Creado')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->label('Actualizado')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -191,18 +233,59 @@ class HabitacionTipoResource extends Resource
                     ->native(false),
             ])
             ->actions([
+                Tables\Actions\Action::make('recalcular_precios')
+                    ->label('Recalcular Precio')
+                    ->icon('heroicon-o-calculator')
+                    ->color('warning')
+                    ->action(function ($record) {
+                        \App\Observers\HabitacionTipoObserver::recalcularPreciosManual($record);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Precio Recalculado')
+                            ->body("Precio actualizado para '{$record->name}': S/ {$record->fresh()->precio_final}")
+                            ->success()
+                            ->send();
+                    })
+                    ->requiresConfirmation()
+                    ->modalDescription('Esto recalculará el precio final basado en el precio base más las características seleccionadas.')
+                    ->modalSubmitActionLabel('Recalcular'),
+
                 Tables\Actions\ViewAction::make()
                     ->icon('heroicon-o-eye')
                     ->color('info'),
+
                 Tables\Actions\EditAction::make()
                     ->icon('heroicon-o-pencil-square')
                     ->color('primary'),
+
                 Tables\Actions\DeleteAction::make()
                     ->icon('heroicon-o-trash')
                     ->color('danger'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('recalcular_precios_bulk')
+                        ->label('Recalcular Precios Seleccionados')
+                        ->icon('heroicon-o-calculator')
+                        ->color('warning')
+                        ->action(function ($records) {
+                            $procesados = 0;
+
+                            foreach ($records as $record) {
+                                \App\Observers\HabitacionTipoObserver::recalcularPreciosManual($record);
+                                $procesados++;
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Precios Recalculados')
+                                ->body("Se recalcularon correctamente {$procesados} tipos de habitación.")
+                                ->success()
+                                ->send();
+                        })
+                        ->requiresConfirmation()
+                        ->modalDescription('Esto recalculará los precios finales de todos los tipos seleccionados.')
+                        ->modalSubmitActionLabel('Recalcular Todo'),
+
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
