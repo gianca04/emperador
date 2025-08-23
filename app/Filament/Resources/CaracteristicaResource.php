@@ -49,7 +49,6 @@ class CaracteristicaResource extends Resource
                     ->extraAttributes(['class' => 'font-bold'])
                     ->sortable(),
 
-
                 Tables\Columns\TextColumn::make('precio')
                     ->money('PEN') // Formatea como moneda (Peruvian Sol)
                     ->sortable()
@@ -112,7 +111,6 @@ class CaracteristicaResource extends Resource
     {
         return [
             //
-
         ];
     }
 

@@ -1,4 +1,132 @@
 <div>
+    <!-- Panel de Búsqueda y Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            Filtros de Habitaciones
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <!-- Filtro por Número -->
+            <div>
+                <label for="filtroNumero" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Número de Habitación
+                </label>
+                <input
+                    type="text"
+                    id="filtroNumero"
+                    wire:model.live="filtroNumero"
+                    placeholder="Ej: 101, 201..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+            </div>
+
+            <!-- Filtro por Estado -->
+            <div>
+                <label for="filtroEstado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Estado
+                </label>
+                <select
+                    id="filtroEstado"
+                    wire:model.live="filtroEstado"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                    <option value="">Todos los estados</option>
+                    <option value="Disponible">Disponible</option>
+                    <option value="Ocupada">Ocupada</option>
+                    <option value="Limpiar">Por limpiar</option>
+                    <option value="Deshabilitada">Deshabilitada</option>
+                    <option value="Mantenimiento">En Mantenimiento</option>
+                </select>
+            </div>
+
+            <!-- Filtro por Ubicación -->
+            <div>
+                <label for="filtroUbicacion" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Ubicación
+                </label>
+                <select
+                    id="filtroUbicacion"
+                    wire:model.live="filtroUbicacion"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                    <option value="">Todas las ubicaciones</option>
+                    <option value="Segundo Piso">Segundo Piso</option>
+                    <option value="Tercer Piso">Tercer Piso</option>
+                    <option value="Cuarto Piso">Cuarto Piso</option>
+                    <option value="Quinto Piso">Quinto Piso</option>
+                </select>
+            </div>
+
+            <!-- Toggle Solo Disponibles -->
+            <div class="flex items-end">
+                <label class="flex items-center">
+                    <input
+                        type="checkbox"
+                        wire:model.live="mostrarSoloDisponibles"
+                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                    >
+                    <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Solo disponibles</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Botones de filtro rápido -->
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button
+                wire:click="filtrarPorEstado('Disponible')"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-800 dark:text-green-100"
+            >
+                <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                Disponibles
+            </button>
+            <button
+                wire:click="filtrarPorEstado('Ocupada')"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-800 dark:text-red-100"
+            >
+                <span class="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                Ocupadas
+            </button>
+            <button
+                wire:click="filtrarPorEstado('Limpiar')"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-800 dark:text-yellow-100"
+            >
+                <span class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                Por limpiar
+            </button>
+            <button
+                wire:click="filtrarPorEstado('Mantenimiento')"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-100"
+            >
+                <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                Mantenimiento
+            </button>
+            <button
+                wire:click="filtrarPorEstado('Deshabilitada')"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-100"
+            >
+                <span class="w-2 h-2 bg-gray-500 rounded-full mr-2"></span>
+                Deshabilitadas
+            </button>
+            <button
+                wire:click="limpiarFiltros"
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-100"
+            >
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Limpiar filtros
+            </button>
+        </div>
+
+        <!-- Contador de resultados -->
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+            Mostrando {{ count($habitaciones) }} habitación(es)
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 
         @foreach ($habitaciones as $habitacion)
@@ -72,7 +200,7 @@
                             ? 'bg-green-900'
                             : ($habitacion->estado === 'Ocupada'
                                 ? 'bg-red-900'
-                                : ($habitacion->estado === 'Por limpiar'
+                                : ($habitacion->estado === 'Limpiar'
                                     ? 'bg-red-900'
                                     : ($habitacion->estado === 'En Mantenimiento'
                                         ? 'bg-blue-900'
@@ -83,68 +211,68 @@
                 </div>
 
 
-                <!-- Título -->
-                <a href="#">
-                    <h5 class="mb-2 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Need a help in
-                        Claim?</h5>
-                </a>
-
-                <!-- Descripción -->
-                <p class="mb-3 font-normal text-gray-500 dark:text-gray-400">
-                    Go to this step-by-step guideline process on how to certify for your weekly benefits:
-                </p>
-
-                <!-- Enlace -->
-                <div class="flex flex-col items-center">
-                    <div class="flex mt-4 md:mt-6">
-                        <a href="#"
-                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Add
-                            friend</a>
-
-
-                        <button data-popover-target="popover-user-profile" type="button"
-                            class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">User
-                            profile</button>
-
-                        <div data-popover id="popover-user-profile" role="tooltip"
-                            class="absolute z-10 invisible inline-block w-64 text-sm text-gray-500 transition-opacity duration-300 bg-white border border-gray-200 rounded-lg shadow-xs opacity-0 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600">
-                            <div class="p-3">
-                                <div class="flex items-center justify-between mb-2">
-                                    <a href="#">
-                                        <img class="w-10 h-10 rounded-full"
-                                            src="/docs/images/people/profile-picture-1.jpg" alt="Jese Leos">
-                                    </a>
-                                    <div>
-                                        <button type="button"
-                                            class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-xs px-3 py-1.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Follow</button>
-                                    </div>
-                                </div>
-                                <p class="text-base font-semibold leading-none text-gray-900 dark:text-white">
-                                    <a href="#">Jese Leos</a>
-                                </p>
-                                <p class="mb-3 text-sm font-normal">
-                                    <a href="#" class="hover:underline">@jeseleos</a>
-                                </p>
-                                <p class="mb-4 text-sm">Open-source contributor. Building <a href="#"
-                                        class="text-blue-600 dark:text-blue-500 hover:underline">flowbite.com</a>.</p>
-                                <ul class="flex text-sm">
-                                    <li class="me-2">
-                                        <a href="#" class="hover:underline">
-                                            <span class="font-semibold text-gray-900 dark:text-white">799</span>
-                                            <span>Following</span>
-                                        </a>
-                                    </li>
-
-                                    <li>
-                                        <a href="#" class="hover:underline">
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div data-popper-arrow></div>
-                        </div>
-
+                <!-- Información de la habitación -->
+                <div class="flex-1">
+                    <div class="mb-2">
+                        <span class="text-sm font-medium {{ $habitacion->estado === 'Ocupada' ? 'text-gray-600' : 'text-white' }}">
+                            Tipo: {{ $habitacion->tipo?->name ?? 'No definido' }}
+                        </span>
                     </div>
+
+                    <div class="mb-2">
+                        <span class="text-sm {{ $habitacion->estado === 'Ocupada' ? 'text-gray-600' : 'text-white' }}">
+                            <svg class="inline w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Capacidad: {{ $habitacion->tipo?->capacidad ?? 1 }} persona(s)
+                        </span>
+                    </div>
+
+                    @if($habitacion->ubicacion)
+                    <div class="mb-2">
+                        <span class="text-sm {{ $habitacion->estado === 'Ocupada' ? 'text-gray-600' : 'text-white' }}">
+                            <svg class="inline w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                            </svg>
+                            {{ $habitacion->ubicacion }}
+                        </span>
+                    </div>
+                    @endif
+
+                    @if($habitacion->precio_final > 0)
+                    <div class="mb-3">
+                        <span class="text-lg font-bold {{ $habitacion->estado === 'Ocupada' ? 'text-gray-800' : 'text-white' }}">
+                            S/ {{ number_format($habitacion->precio_final, 2) }}
+                        </span>
+                    </div>
+                    @endif
+
+                    @if($habitacion->ultima_limpieza)
+                    <div class="text-xs {{ $habitacion->estado === 'Ocupada' ? 'text-gray-500' : 'text-gray-200' }}">
+                        Última limpieza: {{ $habitacion->ultima_limpieza->format('d/m/Y H:i') }}
+                    </div>
+                    @endif
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex justify-center mt-4">
+                    @if($habitacion->estado === 'Disponible')
+                        <button class="px-4 py-2 bg-white text-green-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium">
+                            Asignar
+                        </button>
+                    @elseif($habitacion->estado === 'Ocupada')
+                        <button class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 font-medium">
+                            Ver detalles
+                        </button>
+                    @elseif($habitacion->estado === 'Limpiar')
+                        <button class="px-4 py-2 bg-white text-red-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium">
+                            Marcar limpia
+                        </button>
+                    @else
+                        <button class="px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium">
+                            Gestionar
+                        </button>
+                    @endif
                 </div>
 
             </div>

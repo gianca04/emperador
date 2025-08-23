@@ -34,6 +34,11 @@ class Habitaciones extends Component implements HasForms, HasTable
     use InteractsWithTable;
     use InteractsWithForms;
 
+    // Propiedades para el filtrado
+    public $filtroEstado = '';
+    public $filtroNumero = '';
+    public $filtroUbicacion = '';
+    public $mostrarSoloDisponibles = false;
 
     public static function table(Table $table): Table
     {
@@ -130,8 +135,46 @@ class Habitaciones extends Component implements HasForms, HasTable
 
     public function render()
     {
+        $query = Habitacion::with('tipo');
+
+        // Filtro por estado
+        if (!empty($this->filtroEstado)) {
+            $query->where('estado', $this->filtroEstado);
+        }
+
+        // Filtro por número de habitación
+        if (!empty($this->filtroNumero)) {
+            $query->where('numero', 'like', '%' . $this->filtroNumero . '%');
+        }
+
+        // Filtro por ubicación
+        if (!empty($this->filtroUbicacion)) {
+            $query->where('ubicacion', $this->filtroUbicacion);
+        }
+
+        // Filtro rápido para mostrar solo disponibles
+        if ($this->mostrarSoloDisponibles) {
+            $query->where('estado', 'Disponible');
+        }
+
         return view('livewire.habitaciones', [
-            'habitaciones' => Habitacion::all(),
+            'habitaciones' => $query->get(),
         ]);
+    }
+
+    // Método para limpiar todos los filtros
+    public function limpiarFiltros()
+    {
+        $this->filtroEstado = '';
+        $this->filtroNumero = '';
+        $this->filtroUbicacion = '';
+        $this->mostrarSoloDisponibles = false;
+    }
+
+    // Método para filtrar por estado específico
+    public function filtrarPorEstado($estado)
+    {
+        $this->filtroEstado = $estado;
+        $this->mostrarSoloDisponibles = false;
     }
 }
