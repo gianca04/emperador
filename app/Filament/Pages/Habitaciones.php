@@ -18,7 +18,7 @@ class Habitaciones extends Page
 
     public function mount()
     {
-        // Cargar todas las habitaciones y pasarlas a la vista
-        $this->habitaciones = Habitacion::all();
+        // Cargar todas las habitaciones con sus relaciones y pasarlas a la vista
+        $this->habitaciones = Habitacion::with(['tipo.caracteristicas', 'caracteristicas'])->get();
     }
 }
