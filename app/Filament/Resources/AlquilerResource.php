@@ -16,6 +16,10 @@ use Malzariey\FilamentDaterangepickerFilter\Filters\DateRangeFilter;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
+use Filament\Forms\Components\Actions\Action;
+use Filament\Forms\Components\Grid;
+use Filament\Support\Enums\IconPosition;
+use Filament\Forms\Components\ViewField;
 use Filament\Notifications\Notification;
 
 use Filament\Forms\Components\DateTimePicker;
@@ -62,104 +66,190 @@ class AlquilerResource extends Resource
                 ->description('Información principal sobre el alquiler.')
                 ->schema([
 
-                    Select::make('habitacion_id')
-                        ->label('Habitación')
-                        ->options(Habitacion::pluck('numero', 'id'))
-                        ->searchable()
-                        ->reactive() // o ->live(), según tu versión de Filament
-                        ->required()
-                        // Se ejecuta cuando el formulario se "hidrata" con los valores existentes (modo edición):
-                        ->afterStateHydrated(function ($state, callable $set) {
-                            if (!$state) {
-                                // Si no hay habitacion_id, reiniciamos
-                                $set('caracteristicas', []);
-                                $set('precio_caracteristicas', 0);
-                                $set('habitacionInfo', []);
-                                return;
-                            }
+                    Forms\Components\Toggle::make('mostrar_todas_habitaciones')
+                        ->label('Mostrar todas las habitaciones')
+                        ->helperText('Por defecto solo se muestran habitaciones disponibles')
+                        ->reactive()
+                        ->afterStateUpdated(fn ($state, callable $set) => $set('habitacion_id', null))
+                        ->columnSpanFull(),
 
-                            // Cargar la habitación con sus características
-                            $habitacion = Habitacion::with('caracteristicas')->find($state);
-
-                            if ($habitacion) {
-                                $set('caracteristicas', $habitacion->caracteristicas->pluck('id')->toArray());
-                                $set('precio_caracteristicas', $habitacion->caracteristicas->sum('precio'));
-                                $set('habitacionInfo', $habitacion->toArray());
-                            } else {
-                                $set('caracteristicas', []);
-                                $set('precio_caracteristicas', 0);
-                                $set('habitacionInfo', []);
-                            }
-                        })
-                        // Se ejecuta cada vez que el usuario cambia el select manualmente:
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            if (!$state) {
-                                // Si no hay habitacion_id, reiniciamos
-                                $set('caracteristicas', []);
-                                $set('precio_caracteristicas', 0);
-                                $set('habitacionInfo', []);
-                                return;
-                            }
-
-                            // Cargar la habitación con sus características
-                            $habitacion = Habitacion::with('caracteristicas')->find($state);
-
-                            if ($habitacion) {
-                                $set('caracteristicas', $habitacion->caracteristicas->pluck('id')->toArray());
-                                $set('precio_caracteristicas', $habitacion->caracteristicas->sum('precio'));
-                                $set('habitacionInfo', $habitacion->toArray());
-                            } else {
-                                $set('caracteristicas', []);
-                                $set('precio_caracteristicas', 0);
-                                $set('habitacionInfo', []);
-                            }
-                        })
-                        ->validationMessages(['required' => 'Selecciona una habitación.']),
-
-
-                    Section::make('Información de la Habitación')
-                        ->collapsed()
-                        ->columns(4)
-                        ->hidden(fn($get) => empty($get('habitacionInfo'))) // Oculta si no hay información
+                    Grid::make(2)
                         ->schema([
-                            TextInput::make('habitacionInfo.numero')
-                                ->label('Número de Habitación')
-                                ->disabled(),
+                            Select::make('habitacion_id')
+                                ->label('Habitación')
+                                ->options(function ($get) {
+                                    $query = Habitacion::with('tipo')->orderBy('numero');
 
-                            Placeholder::make('habitacionInfo.habitacion_tipo')
-                                ->label('Tipo de Habitación')
-                                ->content(fn($get) => Habitacion::find($get('habitacion_id'))?->getTipoNombre() ?? 'No definido'),
+                                    // Por defecto mostrar solo disponibles, a menos que se especifique mostrar todas
+                                    if (!$get('mostrar_todas_habitaciones')) {
+                                        $query->where('estado', 'Disponible');
+                                    }
 
+                                    return $query->get()
+                                        ->mapWithKeys(function ($habitacion) {
+                                            $tipoNombre = $habitacion->tipo?->name ?? 'Sin tipo';
+                                            $estado = $habitacion->estado;
+                                            $precio = number_format((float)$habitacion->precio_final, 2);
 
-                            TextInput::make('habitacionInfo.ubicacion')
-                                ->label('Ubicación')
-                                ->disabled()
-                                ->prefix('Piso:'),
+                                            // Iconos según el estado
+                                            $icono = match($estado) {
+                                                'Disponible' => '✅',
+                                                'Ocupada' => '🔴',
+                                                'Mantenimiento' => '🔧',
+                                                'Limpieza' => '🧹',
+                                                default => '⚪'
+                                            };
 
-                            TextInput::make('habitacionInfo.precio_base')
-                                ->label('Precio Base')
-                                ->numeric()
-                                ->disabled(),
+                                            // Crear etiqueta informativa con icono
+                                            $label = "{$icono} #{$habitacion->numero} - {$tipoNombre} - S/ {$precio}";
 
-                            TextInput::make('habitacionInfo.precio_final')
-                                ->label('Precio Final')
-                                ->numeric()
-                                ->disabled(),
+                                            return [$habitacion->id => $label];
+                                        });
+                                })
+                                ->searchable()
+                                ->placeholder('Selecciona una habitación...')
+                                ->helperText('✅ Disponible | 🔴 Ocupada | 🔧 Mantenimiento | 🧹 Limpieza')
+                                ->reactive() // o ->live(), según tu versión de Filament
+                                ->required()
+                                ->columnSpan(1)
+                                // Se ejecuta cuando el formulario se "hidrata" con los valores existentes (modo edición):
+                                ->afterStateHydrated(function ($state, callable $set) {
+                                    if (!$state) {
+                                        // Si no hay habitacion_id, reiniciamos
+                                        $set('caracteristicas', []);
+                                        $set('precio_caracteristicas', 0);
+                                        $set('habitacionInfo', []);
+                                        return;
+                                    }
 
-                            DateTimePicker::make('habitacionInfo.ultima_limpieza')
-                                ->label('Última Limpieza')
-                                ->disabled(),
+                                    // Cargar la habitación con sus características
+                                    $habitacion = Habitacion::with('caracteristicas')->find($state);
 
-                            Forms\Components\Textarea::make('habitacionInfo.descripcion')
-                                ->label('Descripción')
-                                ->disabled(),
+                                    if ($habitacion) {
+                                        $set('caracteristicas', $habitacion->caracteristicas->pluck('id')->toArray());
+                                        $set('precio_caracteristicas', $habitacion->caracteristicas->sum('precio'));
+                                        $set('habitacionInfo', $habitacion->toArray());
+                                    } else {
+                                        $set('caracteristicas', []);
+                                        $set('precio_caracteristicas', 0);
+                                        $set('habitacionInfo', []);
+                                    }
+                                })
+                                // Se ejecuta cada vez que el usuario cambia el select manualmente:
+                                ->afterStateUpdated(function ($state, callable $set) {
+                                    if (!$state) {
+                                        // Si no hay habitacion_id, reiniciamos
+                                        $set('caracteristicas', []);
+                                        $set('precio_caracteristicas', 0);
+                                        $set('habitacionInfo', []);
+                                        return;
+                                    }
 
-                            Forms\Components\Textarea::make('habitacionInfo.notas')
-                                ->label('Notas')
-                                ->disabled(),
+                                    // Cargar la habitación con sus características
+                                    $habitacion = Habitacion::with('caracteristicas')->find($state);
+
+                                    if ($habitacion) {
+                                        $set('caracteristicas', $habitacion->caracteristicas->pluck('id')->toArray());
+                                        $set('precio_caracteristicas', $habitacion->caracteristicas->sum('precio'));
+                                        $set('habitacionInfo', $habitacion->toArray());
+                                    } else {
+                                        $set('caracteristicas', []);
+                                        $set('precio_caracteristicas', 0);
+                                        $set('habitacionInfo', []);
+                                    }
+                                })
+                                ->validationMessages(['required' => 'Selecciona una habitación.'])
+                                ->suffixAction(
+                                    Action::make('ver_habitacion')
+                                        ->icon('heroicon-o-eye')
+                                        ->tooltip('Ver detalles de la habitación')
+                                        ->color('info')
+                                        ->modalHeading('Información Detallada de la Habitación')
+                                        ->modalWidth('2xl')
+                                        ->modalSubmitAction(false)
+                                        ->modalCancelActionLabel('Cerrar')
+                                        ->form(function ($get) {
+                                            $habitacionId = $get('habitacion_id');
+                                            if (!$habitacionId) {
+                                                return [];
+                                            }
+
+                                            $habitacion = Habitacion::with(['tipo', 'caracteristicas'])->find($habitacionId);
+                                            if (!$habitacion) {
+                                                return [];
+                                            }
+
+                                            return [
+                                                Section::make("Habitación #{$habitacion->numero}")
+                                                    ->description("Información completa y actualizada")
+                                                    ->icon('heroicon-o-home')
+                                                    ->columns(2)
+                                                    ->schema([
+                                                        Placeholder::make('numero')
+                                                            ->label('Número')
+                                                            ->content($habitacion->numero),
+
+                                                        Placeholder::make('tipo')
+                                                            ->label('Tipo de Habitación')
+                                                            ->content($habitacion->tipo?->name ?? 'No definido'),
+
+                                                        Placeholder::make('ubicacion')
+                                                            ->label('Ubicación')
+                                                            ->content("Piso {$habitacion->ubicacion}"),
+
+                                                        Placeholder::make('estado')
+                                                            ->label('Estado Actual')
+                                                            ->content($habitacion->estado),
+
+                                                        Placeholder::make('precio_base')
+                                                            ->label('Precio Base')
+                                                            ->content('S/ ' . number_format((float)$habitacion->precio_base, 2)),
+
+                                                        Placeholder::make('precio_final')
+                                                            ->label('Precio Final')
+                                                            ->content('S/ ' . number_format((float)$habitacion->precio_final, 2)),
+
+                                                        Placeholder::make('ultima_limpieza')
+                                                            ->label('Última Limpieza')
+                                                            ->content($habitacion->ultima_limpieza ?
+                                                                $habitacion->ultima_limpieza->format('d/m/Y H:i') :
+                                                                'No registrada')
+                                                            ->columnSpanFull(),
+                                                    ]),
+
+                                                Section::make('Características Incluidas')
+                                                    ->description('Servicios y comodidades de la habitación')
+                                                    ->icon('heroicon-o-star')
+                                                    ->hidden($habitacion->caracteristicas->count() === 0)
+                                                    ->schema([
+                                                        ViewField::make('caracteristicas')
+                                                            ->view('filament.components.caracteristicas-lista', [
+                                                                'caracteristicas' => $habitacion->caracteristicas,
+                                                                'total_caracteristicas' => $habitacion->caracteristicas->sum('precio')
+                                                            ])
+                                                    ]),
+
+                                                Section::make('Información Adicional')
+                                                    ->description('Detalles complementarios')
+                                                    ->icon('heroicon-o-information-circle')
+                                                    ->hidden(empty($habitacion->descripcion) && empty($habitacion->notas))
+                                                    ->schema([
+                                                        Placeholder::make('descripcion')
+                                                            ->label('Descripción')
+                                                            ->content($habitacion->descripcion ?: 'Sin descripción')
+                                                            ->hidden(empty($habitacion->descripcion)),
+
+                                                        Placeholder::make('notas')
+                                                            ->label('Notas')
+                                                            ->content($habitacion->notas ?: 'Sin notas')
+                                                            ->hidden(empty($habitacion->notas)),
+                                                    ])
+                                            ];
+                                        })
+                                        ->visible(fn ($get) => !empty($get('habitacion_id')))
+                                ),
                         ]),
                 ]),
-
 
             Forms\Components\Section::make('Detalles de la Habitación')
 
@@ -416,12 +506,7 @@ class AlquilerResource extends Resource
                         'FINALIZADO' => 'Finalizado',
                         default => 'Desconocido',
                     })
-                    ->color(fn(?string $state): string => match ($state) {
-                        'FINALIZADO' => 'success',  // Verde
-                        'PENDIENTE' => 'warning',   // Amarillo
-                        'EN_CURSO' => 'danger',     // Rojo
-                        default => 'secondary',     // Gris si el estado no es reconocido
-                    }),
+                    ,
             ])
             ->filters([
                 DateRangeFilter::make('created_at'),
